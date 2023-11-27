@@ -1,7 +1,5 @@
 package com.aardman.animatorfilter
 
-import androidx.annotation.NonNull
-
 import android.graphics.Bitmap
 import android.view.Surface 
 
@@ -81,7 +79,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
   } 
  
 
-private fun createFilter(@NonNull call: MethodCall, @NonNull result: Result) {
+private fun createFilter(call: MethodCall,  result: Result) {
   // Get request params
   val width: Int = call.argument("width")!!
   val height: Int = call.argument("height")!!
