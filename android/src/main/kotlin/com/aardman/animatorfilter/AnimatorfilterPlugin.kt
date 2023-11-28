@@ -25,6 +25,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
   private var pluginBinding: FlutterPlugin.FlutterPluginBinding? = null
   private var gaussianBlur: GaussianBlur? = null
 
+
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "animatorfilter")
     channel.setMethodCallHandler(this)
@@ -79,6 +80,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
   } 
  
 
+//TODO Extract correctly formatted data from the camera (via method channel)
 private fun createFilter(call: MethodCall,  result: Result) {
   // Get request params
   val width: Int = call.argument("width")!!
@@ -89,6 +91,8 @@ private fun createFilter(call: MethodCall,  result: Result) {
   val reply: MutableMap<String, Any> = HashMap()
 
   if (srcImage != null) {
+
+    //TODO Convert input bytes ready for passing into the filter chain as a correctly formatted bitmap
     // Convert input image to bitmap
     val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     bmp.copyPixelsFromBuffer(ByteBuffer.wrap(srcImage))

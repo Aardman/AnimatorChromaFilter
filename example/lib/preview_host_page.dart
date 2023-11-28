@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:camera/camera.dart';
 import 'package:animatorfilter/filtered_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:animatorfilter/filtered_preview_controller.dart';
@@ -29,27 +30,37 @@ class _PreviewPageState  extends State<PreviewPage> {
     await _controller?.dispose();
    }
 
-   //static image loading
-   //TODO replace with camera setup
+   //static image loading 
    init() async {
-    const imageProvider = AssetImage('assets/drawable/image.jpg');
-    var stream = imageProvider.resolve(ImageConfiguration.empty);
 
-    //init  promise  to  fulfil when image is  loaded  
-    final Completer<ImageInfo> completer = Completer<ImageInfo>();
-    var  listener =  ImageStreamListener((ImageInfo  info, bool _) {
-      completer.complete(info);
-    });
-
-    stream.addListener(listener);
-
-    final imageInfo  = await  completer.future;
-
-    await initPreviewController(imageInfo);
-
-    stream.removeListener(listener);
+    //To replace
+    // await initImageInfoFromFile();
+    await initImageInfoFromFile();
 
    }
+ 
+ 
+
+   //This version sets a single value for the imageInfo from a file
+   Future<void> initImageInfoFromFile() async {
+     const imageProvider = AssetImage('assets/drawable/image.jpg');
+     var stream = imageProvider.resolve(ImageConfiguration.empty);
+      
+     //init  promise  to  fulfil when image is  loaded  
+     final Completer<ImageInfo> completer = Completer<ImageInfo>();
+     var  listener =  ImageStreamListener((ImageInfo  info, bool _) {
+       completer.complete(info);
+     });
+     
+     stream.addListener(listener);
+     
+     final imageInfo  = await  completer.future; 
+     
+     await initPreviewController(imageInfo);
+     
+     stream.removeListener(listener);
+   }
+ 
 
    initPreviewController(ImageInfo  info) async {
 

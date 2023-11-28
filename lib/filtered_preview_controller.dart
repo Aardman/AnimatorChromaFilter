@@ -30,6 +30,7 @@ class FilteredPreviewController {
 
 //Lifecycle
 
+//TODO Accept correct formatted data which is the camera frame output
  Future<void> initialize(ByteData bytes, int width, int height) async {
     if (_isDisposed) {
       throw Exception('Disposed FilterPreviewController');
