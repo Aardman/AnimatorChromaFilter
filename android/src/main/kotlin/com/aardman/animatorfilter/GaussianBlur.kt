@@ -6,10 +6,12 @@ import android.opengl.EGLConfig
 import android.opengl.EGLExt
 import android.opengl.GLES30
 import android.view.Surface
+import com.aardman.animatorfilter.GLUtils.uploadBitmapToTexture
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class GaussianBlur(private val outSurface: Surface, private val srcImg: Bitmap) {
+class GaussianBlur(private val outSurface: Surface, private val textureWidth:Int, private  val textureHeight:Int) {
+	
 	private var mEGLDisplay = EGL14.EGL_NO_DISPLAY
 	private var mEGLContext = EGL14.EGL_NO_CONTEXT
 	private var mEGLSurface = EGL14.EGL_NO_SURFACE
@@ -20,8 +22,7 @@ class GaussianBlur(private val outSurface: Surface, private val srcImg: Bitmap) 
 	private var vao: IntArray = IntArray(1)
 
 	private var srcTexture: Int
-
-	// Credit: https://xorshaders.weebly.com/tutorials/blur-shaders-5-part-2
+ 
 	private val fragmentShader = """#version 300 es
 		precision highp float;
 
@@ -59,7 +60,7 @@ class GaussianBlur(private val outSurface: Surface, private val srcImg: Bitmap) 
 		programSetup()
 
 		// Create the texture that will hold the source image
-		srcTexture = GLUtils.createTexture(srcImg, srcImg.width, srcImg.height)
+		srcTexture = GLUtils.createTexture(textureWidth, textureHeight)
 	}
 
 	private fun eglSetup() {
@@ -162,39 +163,47 @@ class GaussianBlur(private val outSurface: Surface, private val srcImg: Bitmap) 
 		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 	}
 
-	fun draw(radius: Float, flip: Boolean = false) {
+	fun update(newBitmap: Bitmap, radius: Float, flip: Boolean = false) {
 		makeCurrent()
+	
+		// Update the texture with the new bitmap
+		//updateTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height)
+		uploadBitmapToTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height,  GLES30.GL_RGBA,  GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE)
 
+		//TODO Check if this should be performed here or in the caller, on android plugin
+		//newBitmap.recycle()
+	
+		// Continue with the shader application as in the draw method
+	
 		// Tell it to use our program
 		GLES30.glUseProgram(this.program)
-
-		// set u_radius in fragment shader
+	
+		// Set u_radius in the fragment shader
 		GLES30.glUniform1f(this.uniforms["u_radius"]!!, radius)
-
-		GLES30.glUniform1f(this.uniforms["u_flipY"]!!, if (flip) -1f else 1f) // need to y flip for canvas
-
+	
+		GLES30.glUniform1f(this.uniforms["u_flipY"]!!, if (flip) -1f else 1f) // Need to y flip for canvas
+	
 		// Tell the shader to get the texture from texture unit 0
 		GLES30.glUniform1i(this.uniforms["u_image"]!!, 0)
 		GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + 0)
 		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, srcTexture)
-
-		// Unbind any output frame buffer that may be have bounded by other OpenGL programs (so we render to the default display)
+	
+		// Unbind any output frame buffer that may have been bound by other OpenGL programs (so we render to the default display)
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-
-		GLES30.glViewport(0, 0, srcImg.width, srcImg.height)
+	
+		GLES30.glViewport(0, 0, newBitmap.width, newBitmap.height)
 		GLES30.glClearColor(0f, 0f, 0f, 0f)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
-
+	
 		// Draw the rectangles we put in the vertex shader
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
-
-		// This "draw" the result onto the surface we got from Flutter
+	
+		// This "draws" the result onto the surface we got from Flutter
 		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
 		GLUtils.checkEglError("eglSwapBuffers")
 	}
 
 	fun destroy() {
-		this.srcImg.recycle()
 
 		val texts = intArrayOf(this.srcTexture)
 		GLES30.glDeleteTextures(texts.size, texts, 0)
@@ -217,3 +226,4 @@ class GaussianBlur(private val outSurface: Surface, private val srcImg: Bitmap) 
 		GLUtils.checkEglError("eglMakeCurrent")
 	}
 }
+ 

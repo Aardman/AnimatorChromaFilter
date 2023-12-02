@@ -42,21 +42,32 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
           return
         }
 
+        //Create with width and height parameters from the call
         createFilter(call, result)
       }
 
-      "draw" -> {
+      //TODO implement update
+      "update" -> {
         if (gaussianBlur != null) {
-          // Get the radius param
-          val radius: Double = call.argument("radius")!!
+          // Get the image param
+          //val image: ByteArray = call.argument("image")!!
+          val image = call.argument("image") as? ByteArray
+          val width = 1024
+          val height = 720
 
-          gaussianBlur!!.draw(radius.toFloat(), true)
+          val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+          bmp.copyPixelsFromBuffer(ByteBuffer.wrap(image))
+
+          val radius : Float = 0.5f
+    
+          //Filterchain processes this as a bitmap
+          gaussianBlur!!.update(bmp, radius, true)
           result.success(null)
         } else {
           result.error("NOT_INITIALIZED", "Filter not initialized", null)
         }
       }
-
+ 
       "dispose" -> {
         gaussianBlur?.destroy()
         if (flutterSurfaceTexture != null) {
@@ -85,33 +96,23 @@ private fun createFilter(call: MethodCall,  result: Result) {
   // Get request params
   val width: Int = call.argument("width")!!
   val height: Int = call.argument("height")!!
-  val srcImage = call.argument("img") as? ByteArray
 
   // our response will be a dictionary
   val reply: MutableMap<String, Any> = HashMap()
 
-  if (srcImage != null) {
+ // Create a Surface for our filter to draw on, it is backed by a texture we get from Flutter
+ flutterSurfaceTexture = pluginBinding!!.textureRegistry.createSurfaceTexture()
+ val nativeSurfaceTexture = flutterSurfaceTexture!!.surfaceTexture()
+ nativeSurfaceTexture.setDefaultBufferSize(width, height)
+ val nativeSurface = Surface(nativeSurfaceTexture)
 
-    //TODO Convert input bytes ready for passing into the filter chain as a correctly formatted bitmap
-    // Convert input image to bitmap
-    val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    bmp.copyPixelsFromBuffer(ByteBuffer.wrap(srcImage))
+ // create our filter ready to the surface we just created (which is backed
+ // by the flutter texture
+ gaussianBlur = GaussianBlur(nativeSurface, width, height);
 
-    // Create a Surface for our filter to draw on, it is backed by a texture we get from Flutter
-    flutterSurfaceTexture = pluginBinding!!.textureRegistry.createSurfaceTexture()
-    val nativeSurfaceTexture = flutterSurfaceTexture!!.surfaceTexture()
-    nativeSurfaceTexture.setDefaultBufferSize(width, height)
-    val nativeSurface = Surface(nativeSurfaceTexture)
+ reply["textureId"] = flutterSurfaceTexture?.id() ?: -1
+ result.success(reply)
 
-    // create our filter and tell it to draw to the surface we just created (which is backed
-    // by the flutter texture)
-    gaussianBlur = GaussianBlur(nativeSurface, bmp)
-  }
-
-  // Return the flutter texture id to Flutter land, the "Texture" widget in our app will
-  // display it
-  reply["textureId"] = flutterSurfaceTexture?.id() ?: -1
-  result.success(reply)
 }
  
 

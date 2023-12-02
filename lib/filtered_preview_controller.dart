@@ -1,4 +1,6 @@
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart'; 
+import 'package:camera/camera.dart';
+import 'ImageConverter.dart';
 
 const MethodChannel _channel =  MethodChannel('animatorfilter');
 
@@ -29,9 +31,8 @@ class FilteredPreviewController {
   }
 
 //Lifecycle
-
-//TODO Accept correct formatted data which is the camera frame output
- Future<void> initialize(ByteData bytes, int width, int height) async {
+ 
+ Future<void> initialize(int width, int height) async {
     if (_isDisposed) {
       throw Exception('Disposed FilterPreviewController');
     }
@@ -40,7 +41,8 @@ class FilteredPreviewController {
     _height = height;
 
    // Initialize the filter on the native platform
-  final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
+  //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
+  final params = {'width': width, 'height': height};
   final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
   _initialized = true;
   _textureId = reply!['textureId'];
@@ -57,15 +59,27 @@ class FilteredPreviewController {
   }
 
 //API
-
-  Future<void> draw(double radius) async {
+ 
+   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
     }
 
-    // Call the filter draw method on the native platform
-    final params = {'radius': radius};
-    await _channel.invokeMethod('draw', params);
+    Uint8List formattedImage = formatImage(cameraImage);
+
+    // val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    // bmp.copyPixelsFromBuffer(ByteBuffer.wrap(srcImage))
+
+    // Call the filter update method on the native platform
+    //TODO Add the input data to the params
+    final params = {'image': formattedImage};
+    await _channel.invokeMethod('update', params);
+  }   
+ 
+  //TODO process CameraImage into correctly formatted argb byte array for passing to Plugin
+  Uint8List formatImage(CameraImage cameraImage) {
+    Uint8List bytes = ImageConverter.convertCameraImageToArgb(cameraImage);
+    return bytes;
   } 
 
 }

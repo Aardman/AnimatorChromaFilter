@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:ffi';
 import 'dart:ui';
+import 'dart:developer';
+import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:animatorfilter/filtered_preview.dart';
 import 'package:flutter/material.dart';
@@ -15,8 +18,19 @@ class PreviewPage  extends StatefulWidget  {
 }
 
 class _PreviewPageState  extends State<PreviewPage> {
-   double _radius = 0 ;
-   FilteredPreviewController?  _controller;
+  
+  CameraController? _camController;
+  int _camFrameRotation = 0;
+  double _camFrameToScreenScale = 0;
+  int _lastRun = 0;
+
+  double _radius = 0 ;
+  FilteredPreviewController?  _controller;
+
+  //Desired Preview Size 
+  //TODO load via parameters?
+  int _textureWidth = 1024;
+  int _textureHeight = 720;
 
    @override
    void initState(){
@@ -29,53 +43,66 @@ class _PreviewPageState  extends State<PreviewPage> {
     super.dispose();
     await _controller?.dispose();
    }
-
-   //static image loading 
-   init() async {
-
-    //To replace
-    // await initImageInfoFromFile();
-    await initImageInfoFromFile();
-
-   }
  
+   init() async {   
+    await initPreviewController(_textureWidth, _textureHeight);
  
+    await initCamera(); 
+   } 
 
-   //This version sets a single value for the imageInfo from a file
-   Future<void> initImageInfoFromFile() async {
-     const imageProvider = AssetImage('assets/drawable/image.jpg');
-     var stream = imageProvider.resolve(ImageConfiguration.empty);
-      
-     //init  promise  to  fulfil when image is  loaded  
-     final Completer<ImageInfo> completer = Completer<ImageInfo>();
-     var  listener =  ImageStreamListener((ImageInfo  info, bool _) {
-       completer.complete(info);
-     });
-     
-     stream.addListener(listener);
-     
-     final imageInfo  = await  completer.future; 
-     
-     await initPreviewController(imageInfo);
-     
-     stream.removeListener(listener);
-   }
- 
+   //This version initialises the camera and starts the image stream 
+   Future<void> initCamera() async {
+    final cameras = await availableCameras();
+    var idx = cameras.indexWhere((c) => c.lensDirection == CameraLensDirection.back);
+    if (idx < 0) {
+      log("No Back camera found - weird");
+      return;
+    }
 
-   initPreviewController(ImageInfo  info) async {
+    var desc = cameras[idx];
+    _camFrameRotation = Platform.isAndroid ? desc.sensorOrientation : 0;
+    _camController = CameraController(
+      desc,
+      ResolutionPreset.high, // 720p
+      enableAudio: false,
+      imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.yuv420 : ImageFormatGroup.bgra8888,
+    );
 
-    final  rgba = await info.image.toByteData(format:  ImageByteFormat.rawRgba);
+    try {
+      await _camController!.initialize();
+      await _camController!.startImageStream((image) => _processCameraImage(image));
+    } catch (e) {
+      log("Error initializing camera, error: ${e.toString()}");
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+
+ //Will be called on each image returned from the camera
+ void _processCameraImage(CameraImage image) async {
+
+    if ( !mounted ) {
+      return;
+    } 
+
+    await _controller?.update(image); 
+  }
+
     
+   initPreviewController(int width,  int height) async {
+
     //Init the controller
     _controller = FilteredPreviewController();
-    await _controller!.initialize(rgba!, info.image.width, info.image.height);
-
-    await _controller!.draw(_radius);
+    await _controller!.initialize(width, height);
 
     //update ui
     setState(() {});
 
    }
+ 
 
  @override
   Widget build(BuildContext context) {
@@ -112,8 +139,9 @@ class _PreviewPageState  extends State<PreviewPage> {
                     max: 20,
                     onChanged: (val) {
                       setState(() {
-                        _radius = val;
-                        _controller!.draw(_radius);
+                        // Now we wait for an update from the camera stream
+                        // _radius = val;
+                        // _controller!.draw(_radius);
                       });
                     },
                   ),
@@ -128,3 +156,24 @@ class _PreviewPageState  extends State<PreviewPage> {
 
 
 }
+
+
+ //This version sets a single value for the imageInfo from a file
+  //  Future<void> initImageInfoFromFile() async {
+  //    const imageProvider = AssetImage('assets/drawable/image.jpg');
+  //    var stream = imageProvider.resolve(ImageConfiguration.empty);
+      
+  //    //init  promise  to  fulfil when image is  loaded  
+  //    final Completer<ImageInfo> completer = Completer<ImageInfo>();
+  //    var  listener =  ImageStreamListener((ImageInfo  info, bool _) {
+  //      completer.complete(info);
+  //    });
+     
+  //    stream.addListener(listener);
+     
+  //    final imageInfo  = await  completer.future; 
+     
+  //    await initPreviewController(imageInfo);
+     
+  //    stream.removeListener(listener);
+  //  }

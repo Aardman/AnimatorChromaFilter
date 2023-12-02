@@ -27,17 +27,6 @@ class HomeWidget extends StatelessWidget {
 
   @override 
   Widget build(BuildContext context){
-    return Container(
-      color: Colors.white,
-      child:  Center(
-        child: ElevatedButton(
-          child: const Text('Blur'),
-          onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (ctx){
-              return const PreviewPage();
-            }
-            ));
-          })));
+     return const PreviewPage();
   }
-
 }

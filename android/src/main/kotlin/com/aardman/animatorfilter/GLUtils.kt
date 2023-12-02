@@ -1,10 +1,10 @@
- 
 package com.aardman.animatorfilter
 
 import android.graphics.Bitmap
 import android.opengl.EGL14
 import android.opengl.GLES30
 import android.util.Log
+import java.nio.Buffer
 import java.nio.ByteBuffer
 
 object GLUtils {
@@ -55,7 +55,7 @@ object GLUtils {
 		return program
 	}
 
-	fun createTexture(data: Bitmap?, width: Int, height: Int, internalFormat: Int = GLES30.GL_RGBA, format: Int = GLES30.GL_RGBA, type: Int = GLES30.GL_UNSIGNED_BYTE): Int {
+	fun createTextureWithBitmap(data: Bitmap?, width: Int, height: Int, internalFormat: Int = GLES30.GL_RGBA, format: Int = GLES30.GL_RGBA, type: Int = GLES30.GL_UNSIGNED_BYTE): Int {
 		val texture = IntArray(1)
 		GLES30.glGenTextures(1, texture, 0)
 		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texture[0])
@@ -64,6 +64,15 @@ object GLUtils {
 		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
 		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST)
 		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST)
+
+		uploadBitmapToTexture(texture[0], data,width,height,internalFormat,format,type)
+
+		return texture[0]
+	}
+
+	fun uploadBitmapToTexture(textureId: Int, data: Bitmap?, width: Int, height: Int, internalFormat: Int = GLES30.GL_RGBA, format: Int = GLES30.GL_RGBA, type: Int = GLES30.GL_UNSIGNED_BYTE) {
+
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureId)
 
 		// Upload the image into the texture.
 		val mipLevel = 0 // the largest mip
@@ -78,7 +87,25 @@ object GLUtils {
 			GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, mipLevel, internalFormat, width, height, border, format, type, null)
 			GLES30.glGetError()
 		}
+	}
 
+	fun createTexture(width: Int, height: Int, internalFormat: Int = GLES30.GL_RGBA, format: Int = GLES30.GL_RGBA, type: Int = GLES30.GL_UNSIGNED_BYTE): Int {
+		val texture = IntArray(1)
+		GLES30.glGenTextures(1, texture, 0)
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texture[0])
+	
+		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST)
+		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST)
+	
+		// Initialize the texture with no data.
+		val mipLevel = 0 // the largest mip
+		val border = 0
+		GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, mipLevel, internalFormat, width, height, border, format, type, null)
+	
+		GLES30.glGetError() // Check for OpenGL errors.
+	
 		return texture[0]
 	}
 
