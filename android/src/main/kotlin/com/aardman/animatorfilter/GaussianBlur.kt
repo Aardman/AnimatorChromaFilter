@@ -170,9 +170,6 @@ class GaussianBlur(private val outSurface: Surface, private val textureWidth:Int
 		//updateTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height)
 		uploadBitmapToTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height,  GLES30.GL_RGBA,  GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE)
 
-		//TODO Check if this should be performed here or in the caller, on android plugin
-		//newBitmap.recycle()
-	
 		// Continue with the shader application as in the draw method
 	
 		// Tell it to use our program
@@ -201,6 +198,7 @@ class GaussianBlur(private val outSurface: Surface, private val textureWidth:Int
 		// This "draws" the result onto the surface we got from Flutter
 		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
 		GLUtils.checkEglError("eglSwapBuffers")
+
 	}
 
 	fun destroy() {

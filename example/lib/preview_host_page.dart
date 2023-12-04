@@ -28,9 +28,9 @@ class _PreviewPageState  extends State<PreviewPage> {
   FilteredPreviewController?  _controller;
 
   //Desired Preview Size 
-  //TODO load via parameters?
-  int _textureWidth = 1024;
-  int _textureHeight = 720;
+  //TODO (2)
+  double _textureWidth  = -1;
+  double _textureHeight = -1;
 
    @override
    void initState(){
@@ -45,12 +45,14 @@ class _PreviewPageState  extends State<PreviewPage> {
    }
  
    init() async {   
-    await initPreviewController(_textureWidth, _textureHeight);
- 
     await initCamera(); 
+    _textureHeight = _camController!.value.previewSize!.height;
+    _textureWidth  = _camController!.value.previewSize!.width;
+    await initPreviewController(_textureWidth, _textureHeight);
+    await startImageStream();
    } 
 
-   //This version initialises the camera and starts the image stream 
+//This version initialises the camera and starts the image stream 
    Future<void> initCamera() async {
     final cameras = await availableCameras();
     var idx = cameras.indexWhere((c) => c.lensDirection == CameraLensDirection.back);
@@ -70,7 +72,7 @@ class _PreviewPageState  extends State<PreviewPage> {
 
     try {
       await _camController!.initialize();
-      await _camController!.startImageStream((image) => _processCameraImage(image));
+     // await _camController!.startImageStream((image) => _processCameraImage(image));
     } catch (e) {
       log("Error initializing camera, error: ${e.toString()}");
     }
@@ -80,19 +82,38 @@ class _PreviewPageState  extends State<PreviewPage> {
     }
   }
 
+   //This version initialises the camera and starts the image stream 
+   Future<void> startImageStream() async { 
+    try { 
+      await _camController!.startImageStream((image) => _processCameraImage(image));
+    } catch (e) {
+      log("Error initializing camera, error: ${e.toString()}");
+    } 
+  }
+
 
  //Will be called on each image returned from the camera
+ //Framerate 
  void _processCameraImage(CameraImage image) async {
 
-    if ( !mounted ) {
+    int Framerate = 60;
+
+    if ( !mounted ||  DateTime.now().millisecondsSinceEpoch - _lastRun < Framerate) {
       return;
     } 
 
-    await _controller?.update(image); 
+    await _controller?.update(image);
+
+    // if ( _lastRun != 0 ) {
+    //   print(_lastRun);
+    //   print(DateTime.now().millisecondsSinceEpoch);
+    // }
+
+    _lastRun = DateTime.now().millisecondsSinceEpoch;
   }
 
     
-   initPreviewController(int width,  int height) async {
+   initPreviewController(double width,  double height) async {
 
     //Init the controller
     _controller = FilteredPreviewController();

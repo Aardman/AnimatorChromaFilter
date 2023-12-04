@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart'; 
 import 'package:camera/camera.dart';
 import 'ImageConverter.dart';
+import 'package:image/image.dart' as img;
 
 const MethodChannel _channel =  MethodChannel('animatorfilter');
 
@@ -8,8 +9,8 @@ class FilteredPreviewController {
     FilteredPreviewController();
 
     int _textureId = -1;
-    int _width = 0;
-    int _height = 0;
+    double _width = 0;
+    double _height = 0;
     bool _isDisposed = false;
     bool _initialized = false;
 
@@ -22,17 +23,18 @@ class FilteredPreviewController {
     return _textureId;
   }
 
-  int get width {
+  double get width {
     return _width;
   }
 
-  int get height {
+  double get height {
     return _height;
   }
 
 //Lifecycle
+
  
- Future<void> initialize(int width, int height) async {
+ Future<void> initialize(double width, double height) async {
     if (_isDisposed) {
       throw Exception('Disposed FilterPreviewController');
     }
@@ -65,21 +67,46 @@ class FilteredPreviewController {
       throw Exception('FilterController not initialized');
     }
 
-    Uint8List formattedImage = formatImage(cameraImage);
+    // print(cameraImage.width);
+    // print(cameraImage.height);
 
-    // val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    // bmp.copyPixelsFromBuffer(ByteBuffer.wrap(srcImage))
+    Uint8List formattedImage = formatImage(cameraImage); 
 
     // Call the filter update method on the native platform
-    //TODO Add the input data to the params
+    //TODO (2) Add the input data to the params
     final params = {'image': formattedImage};
     await _channel.invokeMethod('update', params);
   }   
  
-  //TODO process CameraImage into correctly formatted argb byte array for passing to Plugin
+  //TODO (1) process CameraImage into correctly formatted argb byte array for passing to Plugin
   Uint8List formatImage(CameraImage cameraImage) {
     Uint8List bytes = ImageConverter.convertCameraImageToArgb(cameraImage);
     return bytes;
   } 
+
+//Not working alternatives for image conversion from CameraImage
+// img.Image _convertBGRA8888(CameraImage image) {
+//   return img.Image.fromBytes(
+//     image.width,
+//     image.height,
+//     image.planes[0].bytes,
+//     img.ChannelOrder.bgra
+//   );
+// } 
+
+// Future<img.Image> formatImageToBitmap(CameraImage cameraImage) async {
+//   Uint8List argbBytes = ImageConverter.convertCameraImageToArgb(cameraImage);
+
+//   // Create a bitmap image object from raw ARGB bytes
+//   img.Image bitmap = img.Image.fromBytes(
+//     cameraImage.width,
+//     cameraImage.height,
+//     argbBytes,
+//     ChannelOrder: img.ChannelOrder.bgra
+//   );
+
+//   return bitmap;
+// } 
+
 
 }

@@ -25,6 +25,8 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
   private var pluginBinding: FlutterPlugin.FlutterPluginBinding? = null
   private var gaussianBlur: GaussianBlur? = null
 
+  private var imageWidth: Int  = 0
+  private var imageHeight: Int = 0
 
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "animatorfilter")
@@ -51,17 +53,18 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
         if (gaussianBlur != null) {
           // Get the image param
           //val image: ByteArray = call.argument("image")!!
-          val image = call.argument("image") as? ByteArray
-          val width = 1024
-          val height = 720
+          val image = call.argument("image") as? ByteArray   
 
-          val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+          val bmp = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888)
           bmp.copyPixelsFromBuffer(ByteBuffer.wrap(image))
-
+    
           val radius : Float = 0.5f
     
           //Filterchain processes this as a bitmap
           gaussianBlur!!.update(bmp, radius, true)
+
+          bmp.recycle()
+
           result.success(null)
         } else {
           result.error("NOT_INITIALIZED", "Filter not initialized", null)
@@ -96,6 +99,9 @@ private fun createFilter(call: MethodCall,  result: Result) {
   // Get request params
   val width: Int = call.argument("width")!!
   val height: Int = call.argument("height")!!
+
+  imageWidth  = width
+  imageHeight = height
 
   // our response will be a dictionary
   val reply: MutableMap<String, Any> = HashMap()
