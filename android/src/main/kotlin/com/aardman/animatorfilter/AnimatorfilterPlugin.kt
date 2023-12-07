@@ -10,6 +10,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.view.TextureRegistry
 import java.nio.ByteBuffer
+import kotlin.experimental.and
 
 /** AnimatorfilterPlugin */
 class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
@@ -51,23 +52,30 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
       //TODO implement update
       "update" -> {
         if (gaussianBlur != null) {
+          
           // Get the image param
           //val image: ByteArray = call.argument("image")!!
-          val image = call.argument("image") as? ByteArray   
+          val image = call.argument<ByteArray>("image") 
+  
+          if (image != null) { 
 
-          val bmp = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888)
-          bmp.copyPixelsFromBuffer(ByteBuffer.wrap(image))
-    
-          val radius : Float = 0.5f
-    
-          //Filterchain processes this as a bitmap
-          gaussianBlur!!.update(bmp, radius, true)
+            val bmp  = convertByteArrayToBitmap(image, imageWidth, imageHeight)
+      
+            val radius : Float = 0.9f
+      
+            //Filterchain processes this as a bitmap
+            gaussianBlur!!.update(bmp, radius, true)
 
-          bmp.recycle()
+            bmp.recycle()
 
-          result.success(null)
+            result.success(null)
+          }
+          else  {
+            result.error("FAILED UPDATE", "Cannot extract a ByteArray from the image parameter", null)
+          }
+         
         } else {
-          result.error("NOT_INITIALIZED", "Filter not initialized", null)
+          result.error("FAILED UPDATE", "Image update unsuccessful", null)
         }
       }
  
@@ -87,6 +95,24 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
       }
     }
   }
+ 
+
+//Convert unsigned data from Dart to signed data 
+fun convertByteArrayToBitmap(image: ByteArray, imageWidth: Int, imageHeight: Int): Bitmap {
+    val argb = IntArray(imageWidth * imageHeight)
+
+    for (i in 0 until imageWidth * imageHeight) {
+        val a = (image[4 * i] and 0xFF.toByte()).toInt()      // Alpha
+        val r = (image[4 * i + 1] and 0xFF.toByte()).toInt()  // Red
+        val g = (image[4 * i + 2] and 0xFF.toByte()).toInt()  // Green
+        val b = (image[4 * i + 3] and 0xFF.toByte()).toInt()  // Blue
+
+        argb[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+    }
+
+    return Bitmap.createBitmap(argb, imageWidth, imageHeight, Bitmap.Config.ARGB_8888)
+}
+
 
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
