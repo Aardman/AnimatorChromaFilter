@@ -32,13 +32,13 @@ class FilteredPreviewController {
   }
 
 //Lifecycle
-
  
  Future<void> initialize(double width, double height) async {
     if (_isDisposed) {
       throw Exception('Disposed FilterPreviewController');
     }
 
+    //Retain values locally for processing images from stream
     _width = width;
     _height = height;
 
@@ -63,23 +63,30 @@ class FilteredPreviewController {
 //API
  
    Future<void> update(CameraImage cameraImage) async {
+  
     if (!_initialized) {
       throw Exception('FilterController not initialized');
     }
+  
+   //Profiling code
+    //Stopwatch stopwatch  = Stopwatch()..start();
 
-    // print(cameraImage.width);
-    // print(cameraImage.height);
+    Uint8List formattedImage = formatImage(cameraImage);  
 
-    Uint8List formattedImage = formatImage(cameraImage); 
-
-    // Call the filter update method on the native platform
-    //TODO (2) Add the input data to the params
-    final params = {'image': formattedImage};
+    //stopwatch.stop();
+    //print('update executed  in  ${stopwatch.elapsedMilliseconds}');
+ 
+    // Call the filter update method on the native platform 
+    final params = {'image': formattedImage, 'width': width, 'height': height}; 
     await _channel.invokeMethod('update', params);
   }   
- 
+   
   //TODO (1) process CameraImage into correctly formatted argb byte array for passing to Plugin
   Uint8List formatImage(CameraImage cameraImage) {
+
+
+
+
     Uint8List bytes = ImageConverter.convertCameraImageToArgb(cameraImage);
     return bytes;
   } 

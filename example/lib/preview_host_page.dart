@@ -71,8 +71,7 @@ class _PreviewPageState  extends State<PreviewPage> {
     );
 
     try {
-      await _camController!.initialize();
-     // await _camController!.startImageStream((image) => _processCameraImage(image));
+      await _camController!.initialize(); 
     } catch (e) {
       log("Error initializing camera, error: ${e.toString()}");
     }
@@ -101,18 +100,13 @@ class _PreviewPageState  extends State<PreviewPage> {
     if ( !mounted ||  DateTime.now().millisecondsSinceEpoch - _lastRun < Framerate) {
       return;
     } 
-
+ 
     await _controller?.update(image);
 
-    // if ( _lastRun != 0 ) {
-    //   print(_lastRun);
-    //   print(DateTime.now().millisecondsSinceEpoch);
-    // }
-
-    _lastRun = DateTime.now().millisecondsSinceEpoch;
+  
+     _lastRun = DateTime.now().millisecondsSinceEpoch;
   }
 
-    
    initPreviewController(double width,  double height) async {
 
     //Init the controller
