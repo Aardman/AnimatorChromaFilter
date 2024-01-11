@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart'; 
 import 'package:camera/camera.dart';
-import 'ImageConverter.dart';
+import 'Image_processor.dart';
 import 'package:image/image.dart' as img;
 
 const MethodChannel _channel =  MethodChannel('animatorfilter');
@@ -83,11 +83,7 @@ class FilteredPreviewController {
    
   //TODO (1) process CameraImage into correctly formatted argb byte array for passing to Plugin
   Uint8List formatImage(CameraImage cameraImage) {
-
-
-
-
-    Uint8List bytes = ImageConverter.convertCameraImageToArgb(cameraImage);
+    Uint8List bytes = ImageProcessor.getBytes(cameraImage);
     return bytes;
   } 
 
