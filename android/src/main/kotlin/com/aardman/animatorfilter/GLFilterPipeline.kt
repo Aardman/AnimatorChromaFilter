@@ -207,13 +207,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
   
 	fun update(yBytes: ByteArray, uBytes:ByteArray, vBytes: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
 		makeCurrent()
-	
-		// Old bitmap input code 
-		// Update the texture with the new bitmap
-		// updateTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height)
-		// val bitmap = makeBitmapFromData(imageData, width, height)
-		// uploadBitmapToTexture(srcTexture, bitmap, width, height,  GLES30.GL_RGBA,  GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE)
-
+		
 		// New code, load Y U V data into textures to use in image conversion
  		val (yTxt,uTxt,vTxt) = GLUtils.setupTextures(yBytes,uBytes,vBytes, width, height)
 		this.srcYTexture = yTxt
