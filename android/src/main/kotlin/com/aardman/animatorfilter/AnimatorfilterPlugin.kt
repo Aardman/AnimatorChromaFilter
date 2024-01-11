@@ -56,15 +56,15 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
           // Get the image param
           //val image: ByteArray = call.argument("imagedata")!!
           val imagedata = call.argument<ByteArray>("imagedata") 
-          val imagewidth = call.argument<Int>("width")
-          val imageheight = call.argument<Int>("height")
+          val width = call.argument<Int>("width")!!
+          val height = call.argument<Int>("height")!!
            
-          if (image != null) { 
+          if (imagedata != null) {
  
             val radius : Float = 0.9f
       
             //Filterchain processes this as a bitmap
-            filterPipline!!.update(imagedata, width, height, radius, true)
+            filterPipeline!!.update(imagedata, width, height, radius, true)
   
             result.success(null)
           }
@@ -78,7 +78,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
       }
  
       "dispose" -> {
-        filterPipline?.destroy()
+        filterPipeline?.destroy()
         if (flutterSurfaceTexture != null) {
           flutterSurfaceTexture!!.release()
         }
@@ -107,8 +107,8 @@ private fun createFilter(call: MethodCall,  result: Result) {
   val width: Int = call.argument("width")!!
   val height: Int = call.argument("height")!!
 
-  imageWidth  = width
-  imageHeight = height
+  this.imageWidth  = width
+  this.imageHeight = height
 
   // our response will be a dictionary
   val reply: MutableMap<String, Any> = HashMap()
