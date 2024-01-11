@@ -225,15 +225,13 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glUseProgram(this.conversionProgram)
 
 
-
-
-
-
-
-
-		
  
-		// Continue with the shader application as in the draw method
+
+
+
+
+ 
+		// Apply the filter shader/s 
 	
 		// Tell it to use our program
 		GLES30.glUseProgram(this.gaussianprogram)
@@ -243,10 +241,10 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	
 		GLES30.glUniform1f(this.uniforms["u_flipY"]!!, if (flip) -1f else 1f) // Need to y flip for canvas
 	
-		// Tell the shader to get the texture from texture unit 0
+		// Tell the shader to get the texture from filterSrcTexture now in RGB format
 		GLES30.glUniform1i(this.uniforms["u_image"]!!, 0)
 		GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + 0)
-		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, srcTexture)
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, filterSrcTexture)
 	
 		// Unbind any output frame buffer that may have been bound by other OpenGL programs (so we render to the default display)
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
@@ -261,6 +259,9 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		// This "draws" the result onto the surface we got from Flutter
 		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
 		GLUtils.checkEglError("eglSwapBuffers")
+ 
+		//Output the changed texture to a file on a background thread
+
 
 	}
 
