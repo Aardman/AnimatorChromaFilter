@@ -60,12 +60,12 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
           val width = call.argument<Int>("width")!!
           val height = call.argument<Int>("height")!!
            
-          if (imagedata != null) {
+          if (y != null && u != null && v !== null) {
  
             val radius : Float = 0.9f
       
             //Filterchain processes this as a bitmap
-            filterPipeline!!.update(yBytes, uBytes, vBytes, width, height, radius, true)
+            filterPipeline!!.update(y, u, v, width, height, radius, true)
   
             result.success(null)
           }
