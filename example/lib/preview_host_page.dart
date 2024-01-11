@@ -57,7 +57,7 @@ class _PreviewPageState  extends State<PreviewPage> {
     final cameras = await availableCameras();
     var idx = cameras.indexWhere((c) => c.lensDirection == CameraLensDirection.back);
     if (idx < 0) {
-      log("No Back camera found - weird");
+      log("No Back camera found - error");
       return;
     }
 
