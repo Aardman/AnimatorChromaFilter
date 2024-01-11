@@ -24,7 +24,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
   private var flutterSurfaceTexture: TextureRegistry.SurfaceTextureEntry? =  null
 
   private var pluginBinding: FlutterPlugin.FlutterPluginBinding? = null
-  private var gaussianBlur: GaussianBlur? = null
+  private var filterPipeline: GLFilterPipeline? = null
 
   private var imageWidth: Int  = 0
   private var imageHeight: Int = 0
@@ -51,23 +51,21 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
 
       //TODO implement update
       "update" -> {
-        if (gaussianBlur != null) {
+        if (filterPipeline != null) {
           
           // Get the image param
-          //val image: ByteArray = call.argument("image")!!
-          val image = call.argument<ByteArray>("image") 
-  
+          //val image: ByteArray = call.argument("imagedata")!!
+          val imagedata = call.argument<ByteArray>("imagedata") 
+          val imagewidth = call.argument<Int>("width")
+          val imageheight = call.argument<Int>("height")
+           
           if (image != null) { 
-
-            val bmp  = convertByteArrayToBitmap(image, imageWidth, imageHeight)
-      
+ 
             val radius : Float = 0.9f
       
             //Filterchain processes this as a bitmap
-            gaussianBlur!!.update(bmp, radius, true)
-
-            bmp.recycle()
-
+            filterPipline!!.update(imagedata, width, height, radius, true)
+  
             result.success(null)
           }
           else  {
@@ -80,7 +78,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
       }
  
       "dispose" -> {
-        gaussianBlur?.destroy()
+        filterPipline?.destroy()
         if (flutterSurfaceTexture != null) {
           flutterSurfaceTexture!!.release()
         }
@@ -95,32 +93,15 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
       }
     }
   }
+
  
-
-//Convert unsigned data from Dart to signed data 
-fun convertByteArrayToBitmap(image: ByteArray, imageWidth: Int, imageHeight: Int): Bitmap {
-    val argb = IntArray(imageWidth * imageHeight)
-
-    for (i in 0 until imageWidth * imageHeight) {
-        val a = (image[4 * i] and 0xFF.toByte()).toInt()      // Alpha
-        val r = (image[4 * i + 1] and 0xFF.toByte()).toInt()  // Red
-        val g = (image[4 * i + 2] and 0xFF.toByte()).toInt()  // Green
-        val b = (image[4 * i + 3] and 0xFF.toByte()).toInt()  // Blue
-
-        argb[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
-    }
-
-    return Bitmap.createBitmap(argb, imageWidth, imageHeight, Bitmap.Config.ARGB_8888)
-}
-
-
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
     this.pluginBinding = null
-  } 
- 
+  }  
 
-//TODO Extract correctly formatted data from the camera (via method channel)
+//Create the textures that will be used to communicate between openGL and 
+//the client application for the flutter plugin
 private fun createFilter(call: MethodCall,  result: Result) {
   // Get request params
   val width: Int = call.argument("width")!!
@@ -140,7 +121,7 @@ private fun createFilter(call: MethodCall,  result: Result) {
 
  // create our filter ready to the surface we just created (which is backed
  // by the flutter texture
- gaussianBlur = GaussianBlur(nativeSurface, width, height);
+ filterPipeline = GLFilterPipeline(nativeSurface, width, height);
 
  reply["textureId"] = flutterSurfaceTexture?.id() ?: -1
  result.success(reply)

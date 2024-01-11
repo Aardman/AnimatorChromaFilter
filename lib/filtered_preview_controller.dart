@@ -75,7 +75,7 @@ class FilteredPreviewController {
     //print('update executed  in  ${stopwatch.elapsedMilliseconds}');
  
     // Call the filter update method on the native platform 
-    final params = {'image': formattedImage, 'width': width, 'height': height}; 
+    final params = {'imagedata': formattedImage, 'width': width, 'height': height}; 
     await _channel.invokeMethod('update', params);
   }   
     

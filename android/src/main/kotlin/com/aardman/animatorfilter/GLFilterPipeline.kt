@@ -10,20 +10,21 @@ import com.aardman.animatorfilter.GLUtils.uploadBitmapToTexture
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class GaussianBlur(private val outSurface: Surface, private val textureWidth:Int, private  val textureHeight:Int) {
+class GLFilterPipeline(private val outSurface: Surface, private val textureWidth:Int, private  val textureHeight:Int) {
 	
 	private var mEGLDisplay = EGL14.EGL_NO_DISPLAY
 	private var mEGLContext = EGL14.EGL_NO_CONTEXT
 	private var mEGLSurface = EGL14.EGL_NO_SURFACE
 
-	private var program: Int = -1
+	private var gaussianprogram: Int = -1
 	private var attributes: MutableMap<String, Int> = hashMapOf()
 	private var uniforms: MutableMap<String, Int> = hashMapOf()
 	private var vao: IntArray = IntArray(1)
 
 	private var srcTexture: Int
  
-	private val fragmentShader = """#version 300 es
+	//Demo filter to be replaced with ChromaKey filter
+	private val gaussianShader = """#version 300 es
 		precision highp float;
 
 		uniform sampler2D u_image;
@@ -52,6 +53,38 @@ class GaussianBlur(private val outSurface: Surface, private val textureWidth:Int
 			outColor =  acc;
 		}
 	"""
+
+	//Shader converts data from texture into correct image format?
+	private val dataToBitmapShader = """#version 300 es
+		precision highp float;
+
+		uniform sampler2D u_image;
+		in vec2 v_texCoord;
+		uniform float u_radius;
+		out vec4 outColor;
+
+		const float Directions = 16.0;
+		const float Quality = 3.0;
+		const float Pi = 6.28318530718; // pi * 2
+
+		void main()
+		{
+			vec2 normRadius = u_radius / vec2(textureSize(u_image, 0));
+			vec4 acc = texture(u_image, v_texCoord);
+			for(float d = 0.0; d < Pi; d += Pi / Directions)
+			{
+				for(float i = 1.0 / Quality; i <= 1.0; i += 1.0 / Quality)
+				{
+					acc += texture(u_image, v_texCoord + vec2(cos(d), sin(d)) * normRadius * i);
+				}
+			}
+
+			acc /= Quality * Directions;
+
+			outColor =  acc;
+		}
+	"""
+
 
 	init {
 		eglSetup()
@@ -115,18 +148,18 @@ class GaussianBlur(private val outSurface: Surface, private val textureWidth:Int
 
 	private fun programSetup() {
 		// create the program
-		this.program = GLUtils.createProgram(
+		this.gaussianprogram = GLUtils.createProgram(
 			GLUtils.VertexShaderSource,
-			fragmentShader
+			gaussianShader
 		)
 
 		// Get vertex shader attributes
-		this.attributes["a_texCoord"] = GLES30.glGetAttribLocation(this.program, "a_texCoord")
+		this.attributes["a_texCoord"] = GLES30.glGetAttribLocation(this.gaussianprogram, "a_texCoord")
 
 		// Find uniforms
-		this.uniforms["u_flipY"] = GLES30.glGetUniformLocation(this.program, "u_flipY")
-		this.uniforms["u_image"] = GLES30.glGetUniformLocation(this.program, "u_image")
-		this.uniforms["u_radius"] = GLES30.glGetUniformLocation(this.program, "u_radius")
+		this.uniforms["u_flipY"] = GLES30.glGetUniformLocation(this.gaussianprogram, "u_flipY")
+		this.uniforms["u_image"] = GLES30.glGetUniformLocation(this.gaussianprogram, "u_image")
+		this.uniforms["u_radius"] = GLES30.glGetUniformLocation(this.gaussianprogram, "u_radius")
 
 		// Create a vertex array object (attribute state)
 		GLES30.glGenVertexArrays(1, this.vao, 0)
@@ -162,18 +195,25 @@ class GaussianBlur(private val outSurface: Surface, private val textureWidth:Int
 		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
 		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 	}
-
-	fun update(newBitmap: Bitmap, radius: Float, flip: Boolean = false) {
+  
+	fun makeBitmapFromData(imageData:ByteArray, width:Int, height:Int) : Bitmap {
+		//Put imageData into a texture or GL side data structure 
+		//Run the conversion program
+		return null
+	}
+  
+	fun update(imageData: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
 		makeCurrent()
 	
 		// Update the texture with the new bitmap
 		//updateTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height)
-		uploadBitmapToTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height,  GLES30.GL_RGBA,  GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE)
+		val bitmap = makeBitmapFromData(imageData, width, height)
+		uploadBitmapToTexture(srcTexture, bitmap, width, height,  GLES30.GL_RGBA,  GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE)
 
 		// Continue with the shader application as in the draw method
 	
 		// Tell it to use our program
-		GLES30.glUseProgram(this.program)
+		GLES30.glUseProgram(this.gaussianprogram)
 	
 		// Set u_radius in the fragment shader
 		GLES30.glUniform1f(this.uniforms["u_radius"]!!, radius)
