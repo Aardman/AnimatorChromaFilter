@@ -67,16 +67,20 @@ class FilteredPreviewController {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
     }
-  
-   //Profiling code
-    //Stopwatch stopwatch  = Stopwatch()..start(); 
-    Uint8List formattedImage =ImageProcessor.getBytes(cameraImage);  
-    //stopwatch.stop();
-    //print('update executed  in  ${stopwatch.elapsedMilliseconds}');
+
+    Uint8List yBytes = cameraImage.planes[0].bytes; // Y plane
+    Uint8List uBytes = cameraImage.planes[1].bytes; // U plane
+    Uint8List vBytes = cameraImage.planes[2].bytes; // V plane
  
     // Call the filter update method on the native platform 
-    final params = {'imagedata': formattedImage, 'width': width, 'height': height}; 
+    final params = {'Y': yBytes, 'U': uBytes, 'V': vBytes,'width': width, 'height': height}; 
     await _channel.invokeMethod('update', params);
   }   
+ 
+   //Profiling code
+    //Stopwatch stopwatch  = Stopwatch()..start(); 
+    //Uint8List formattedImage =ImageProcessor.getBytes(cameraImage);  
+    //stopwatch.stop();
+    //print('update executed  in  ${stopwatch.elapsedMilliseconds}');
     
 }

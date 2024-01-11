@@ -53,9 +53,10 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
       "update" -> {
         if (filterPipeline != null) {
           
-          // Get the image param
-          //val image: ByteArray = call.argument("imagedata")!!
-          val imagedata = call.argument<ByteArray>("imagedata") 
+          // Get the image planes from the YUV420 input
+          val y = call.argument<ByteArray>("yBytes") 
+          val u = call.argument<ByteArray>("uBytes") 
+          val v = call.argument<ByteArray>("vBytes") 
           val width = call.argument<Int>("width")!!
           val height = call.argument<Int>("height")!!
            
@@ -64,7 +65,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
             val radius : Float = 0.9f
       
             //Filterchain processes this as a bitmap
-            filterPipeline!!.update(imagedata, width, height, radius, true)
+            filterPipeline!!.update(yBytes, uBytes, vBytes, width, height, radius, true)
   
             result.success(null)
           }

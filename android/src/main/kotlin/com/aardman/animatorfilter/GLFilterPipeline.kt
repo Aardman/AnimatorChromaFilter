@@ -16,13 +16,21 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private var mEGLContext = EGL14.EGL_NO_CONTEXT
 	private var mEGLSurface = EGL14.EGL_NO_SURFACE
 
-	private var gaussianprogram: Int = -1
+	//Conversion 
+	private var conversionProgram: Int = -1
+	private var srcYTexture:Int
+	private var srcUTexture:Int
+	private var srcVTexture:Int 
+
+	private var filterSrcTexture: Int
+ 
+	//Filter 
+	private var gaussianProgram: Int = -1
 	private var attributes: MutableMap<String, Int> = hashMapOf()
 	private var uniforms: MutableMap<String, Int> = hashMapOf()
 	private var vao: IntArray = IntArray(1)
 
-	private var srcTexture: Int
- 
+
 	//Demo filter to be replaced with ChromaKey filter
 	private val gaussianShader = """#version 300 es
 		precision highp float;
@@ -55,7 +63,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	"""
 
 	//Shader converts data from texture into correct image format?
-	private val dataToBitmapShader = """#version 300 es
+	private val conversionShader = """#version 300 es
 		precision highp float;
 
 		uniform sampler2D u_image;
@@ -147,6 +155,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	}
 
 	private fun programSetup() {
+
 		// create the program
 		this.gaussianprogram = GLUtils.createProgram(
 			GLUtils.VertexShaderSource,
@@ -196,20 +205,34 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 	}
   
-	fun makeBitmapFromData(imageData:ByteArray, width:Int, height:Int) : Bitmap {
-		//Put imageData into a texture or GL side data structure 
-		//Run the conversion program
-		return null
-	}
-  
-	fun update(imageData: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
+	fun update(yBytes: ByteArray, uBytes:ByteArray, vBytes: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
 		makeCurrent()
 	
+		// Old bitmap input code 
 		// Update the texture with the new bitmap
-		//updateTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height)
-		val bitmap = makeBitmapFromData(imageData, width, height)
-		uploadBitmapToTexture(srcTexture, bitmap, width, height,  GLES30.GL_RGBA,  GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE)
+		// updateTexture(srcTexture, newBitmap, newBitmap.width, newBitmap.height)
+		// val bitmap = makeBitmapFromData(imageData, width, height)
+		// uploadBitmapToTexture(srcTexture, bitmap, width, height,  GLES30.GL_RGBA,  GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE)
 
+		// New code, load Y U V data into textures to use in image conversion
+ 		val (yTxt,uTxt,vTxt) = GLUtils.setupTextures(yBytes,uBytes,vBytes, width, height)
+		this.srcYTexture = yTxt
+		this.srcUTexture = uTxt
+		this.srcVTexture = vTxt
+	     
+		//Run conversion shader with these textures as the inputs to generate the output 
+		//texture filterSrcTexture  
+		GLES30.glUseProgram(this.conversionProgram)
+
+
+
+
+
+
+
+
+		
+ 
 		// Continue with the shader application as in the draw method
 	
 		// Tell it to use our program

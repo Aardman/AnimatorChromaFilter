@@ -8,6 +8,8 @@ import java.nio.Buffer
 import java.nio.ByteBuffer
 
 object GLUtils {
+
+
 	var VertexShaderSource = """#version 300 es
 	// vertex value between 0-1
 	in vec2 a_texCoord;
@@ -54,6 +56,34 @@ object GLUtils {
 
 		return program
 	}
+
+	fun createTextureFromPlane(planeData: ByteArray, width: Int, height: Int): Int {
+		val textureHandle = IntArray(1)
+	
+		// Generate a texture ID
+		GLES20.glGenTextures(1, textureHandle, 0)
+		val textureId = textureHandle[0]
+	
+		// Bind to the texture in OpenGL
+		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
+	
+		// Set filtering
+		GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+		GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+	
+		// Load the plane data into the texture
+		GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE, width, height, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, ByteBuffer.wrap(planeData))
+	
+		return textureId
+	}
+	
+	fun setupTextures(yPlane: ByteArray, uPlane: ByteArray, vPlane: ByteArray, width: Int, height: Int): Triple<Int, Int, Int> {
+		val yTexture = createTextureFromPlane(yPlane, width, height)
+		val uTexture = createTextureFromPlane(uPlane, width / 2, height / 2) // Assuming chroma planes are half the size of luma
+		val vTexture = createTextureFromPlane(vPlane, width / 2, height / 2)
+	
+		return Triple(yTexture, uTexture, vTexture)
+	} 
 
 	fun createTextureWithBitmap(data: Bitmap?, width: Int, height: Int, internalFormat: Int = GLES30.GL_RGBA, format: Int = GLES30.GL_RGBA, type: Int = GLES30.GL_UNSIGNED_BYTE): Int {
 		val texture = IntArray(1)
