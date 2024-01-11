@@ -1,5 +1,22 @@
 package com.aardman.animatorfilter;
 
+  
+//Convert unsigned data from Dart to signed data 
+// fun convertByteArrayToBitmap(image: ByteArray, imageWidth: Int, imageHeight: Int): Bitmap {
+//     val argb = IntArray(imageWidth * imageHeight)
+
+//     for (i in 0 until imageWidth * imageHeight) {
+//         val a = (image[4 * i] and 0xFF.toByte()).toInt()      // Alpha
+//         val r = (image[4 * i + 1] and 0xFF.toByte()).toInt()  // Red
+//         val g = (image[4 * i + 2] and 0xFF.toByte()).toInt()  // Green
+//         val b = (image[4 * i + 3] and 0xFF.toByte()).toInt()  // Blue
+
+//         argb[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+//     }
+
+//     return Bitmap.createBitmap(argb, imageWidth, imageHeight, Bitmap.Config.ARGB_8888)
+// } 
+
 //
 //class ImageUtils {
 //
