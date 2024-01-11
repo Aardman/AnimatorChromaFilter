@@ -69,10 +69,8 @@ class FilteredPreviewController {
     }
   
    //Profiling code
-    //Stopwatch stopwatch  = Stopwatch()..start();
-
-    Uint8List formattedImage = formatImage(cameraImage);  
-
+    //Stopwatch stopwatch  = Stopwatch()..start(); 
+    Uint8List formattedImage =ImageProcessor.getBytes(cameraImage);  
     //stopwatch.stop();
     //print('update executed  in  ${stopwatch.elapsedMilliseconds}');
  
@@ -80,36 +78,5 @@ class FilteredPreviewController {
     final params = {'image': formattedImage, 'width': width, 'height': height}; 
     await _channel.invokeMethod('update', params);
   }   
-   
-  //TODO (1) process CameraImage into correctly formatted argb byte array for passing to Plugin
-  Uint8List formatImage(CameraImage cameraImage) {
-    Uint8List bytes = ImageProcessor.getBytes(cameraImage);
-    return bytes;
-  } 
-
-//Not working alternatives for image conversion from CameraImage
-// img.Image _convertBGRA8888(CameraImage image) {
-//   return img.Image.fromBytes(
-//     image.width,
-//     image.height,
-//     image.planes[0].bytes,
-//     img.ChannelOrder.bgra
-//   );
-// } 
-
-// Future<img.Image> formatImageToBitmap(CameraImage cameraImage) async {
-//   Uint8List argbBytes = ImageConverter.convertCameraImageToArgb(cameraImage);
-
-//   // Create a bitmap image object from raw ARGB bytes
-//   img.Image bitmap = img.Image.fromBytes(
-//     cameraImage.width,
-//     cameraImage.height,
-//     argbBytes,
-//     ChannelOrder: img.ChannelOrder.bgra
-//   );
-
-//   return bitmap;
-// } 
-
-
+    
 }
