@@ -1,7 +1,6 @@
 package com.aardman.animatorfilter
 
-import android.graphics.Bitmap
-import android.view.Surface 
+import android.view.Surface
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
@@ -9,8 +8,6 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.view.TextureRegistry
-import java.nio.ByteBuffer
-import kotlin.experimental.and
 
 /** AnimatorfilterPlugin */
 class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
@@ -65,7 +62,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
             val radius : Float = 0.9f
       
             //Filterchain processes this as a bitmap
-            filterPipeline!!.update(y, u, v, width, height, radius, true)
+            filterPipeline!!.render(y, u, v, width, height, radius, true)
   
             result.success(null)
           }
