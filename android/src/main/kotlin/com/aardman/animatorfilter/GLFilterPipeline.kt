@@ -76,23 +76,29 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	//Shader converts data from input textures into RGB format
 	private val conversionShader = """#version 300 es
 		precision mediump float;
-
+		
 		uniform sampler2D yTexture;
 		uniform sampler2D uTexture;
 		uniform sampler2D vTexture;
-		varying vec2 texCoord;
-
+		in vec2 v_texCoord;
+		
+		out vec4 outColor;
+		
 		void main() {
-			float y = texture2D(yTexture, texCoord).r;
-			float u = texture2D(uTexture, texCoord).r - 0.5;
-			float v = texture2D(vTexture, texCoord).r - 0.5;
+			float y = texture(yTexture, v_texCoord).r;
+		
+			// Adjust the texture coordinates for chroma subsampling
+			vec2 chromaTexCoord = v_texCoord / 2.0;
+		
+			float u = texture(uTexture, chromaTexCoord).r - 0.5;
+			float v = texture(vTexture, chromaTexCoord).r - 0.5;
 		
 			float r = y + 1.403 * v;
 			float g = y - 0.344 * u - 0.714 * v;
 			float b = y + 1.770 * u;
 		
-			gl_FragColor = vec4(r, g, b, 1.0);
-    }
+			outColor = vec4(r, g, b, 1.0);
+		}
 	"""
 
 	init {
@@ -153,15 +159,18 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	}
 
 	private fun setupOpenGLObjects() {
-		setupCoordinates()
-		setupConverter()
-		setupFilter()
+//		setupCoordinates()
+//		setupConverter()
+//		setupFilter()
 		setupTextures()
 	}
 
 	private fun setupTextures(){
 		// Create the texture that will hold the source image
 		filterSrcTexture = GLUtils.createTexture(textureWidth, textureHeight)
+		srcYTexture = GLUtils.createTexture(textureWidth, textureHeight)
+		srcUTexture = GLUtils.createTexture(textureWidth/2, textureHeight/2)
+		srcVTexture = GLUtils.createTexture(textureWidth/2, textureHeight/2)
 	}
 
 	private fun setupCoordinates(){
@@ -205,25 +214,24 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		// ... other specific setups like uniforms
 		// Get vertex shader attributes
-	    this.attributes["a_texCoord"] = GLES30.glGetAttribLocation(this.gaussianProgram, "a_texCoord")
+	    this.attributes["f_texCoord"] = GLES30.glGetAttribLocation(this.gaussianProgram, "a_texCoord")
 		// Find uniforms
 		this.uniforms["u_flipY"] = GLES30.glGetUniformLocation(this.gaussianProgram, "u_flipY")
 		this.uniforms["u_image"] = GLES30.glGetUniformLocation(this.gaussianProgram, "u_image")
 		this.uniforms["u_radius"] = GLES30.glGetUniformLocation(this.gaussianProgram, "u_radius")
 
 		//Enable related attributes (might be in a more generic location, but this sequence is required
-		GLES30.glEnableVertexAttribArray(this.attributes["a_texCoord"]!!)
+		GLES30.glEnableVertexAttribArray(this.attributes["f_texCoord"]!!)
 		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
+		GLES30.glVertexAttribPointer(this.attributes["f_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 	}
 
 	private fun setupConverter() {
 		this.yuvConversionProgram = setupShaderProgram(GLUtils.VertexShaderSource, conversionShader)
 
 		// Get vertex shader attributes
-		this.attributes["a_texCoord"] = GLES30.glGetAttribLocation(this.yuvConversionProgram, "a_texCoord")
+		this.attributes["c_texCoord"] = GLES30.glGetAttribLocation(this.yuvConversionProgram, "a_texCoord")
 
-		// Find uniforms
 		// ... other specific setups like uniforms
 		// Find uniforms
 		this.uniforms["yTexture"] = GLES30.glGetUniformLocation(this.yuvConversionProgram, "yTexture")
@@ -231,62 +239,10 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		this.uniforms["uTexture"] = GLES30.glGetUniformLocation(this.yuvConversionProgram, "uTexture")
 
 		//Enable related attributes (might be in a more generic location, but this sequence is required
-		GLES30.glEnableVertexAttribArray(this.attributes["a_texCoord"]!!)
+		GLES30.glEnableVertexAttribArray(this.attributes["c_texCoord"]!!)
 		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
+		GLES30.glVertexAttribPointer(this.attributes["c_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 	}
-
-//	private fun setupFilterProgram() {
-//
-//		// create the program
-//		this.gaussianProgram = GLUtils.createProgram(
-//			GLUtils.VertexShaderSource,
-//			gaussianShader
-//		)
-//
-//		// Get vertex shader attributes
-//		this.attributes["a_texCoord"] = GLES30.glGetAttribLocation(this.gaussianProgram, "a_texCoord")
-//
-//		// Find uniforms
-//		this.uniforms["u_flipY"] = GLES30.glGetUniformLocation(this.gaussianProgram, "u_flipY")
-//		this.uniforms["u_image"] = GLES30.glGetUniformLocation(this.gaussianProgram, "u_image")
-//		this.uniforms["u_radius"] = GLES30.glGetUniformLocation(this.gaussianProgram, "u_radius")
-//
-//		// Create a vertex array object (attribute state)
-//		GLES30.glGenVertexArrays(1, this.vao, 0)
-//		// and make it the one we're currently working with
-//		GLES30.glBindVertexArray(this.vao[0])
-//
-//		// provide texture coordinates to the vertex shader, we use 2 rectangles that will cover
-//		// the entire image
-//		val texCoords = floatArrayOf(
-//			// 1st triangle
-//			0f, 0f,
-//			1f, 0f,
-//			0f, 1f,
-//			// 2nd triangle
-//			0f, 1f,
-//			1f, 0f,
-//			1f, 1f
-//		)
-//
-//		val texCoordsBuffer = ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
-//		texCoordsBuffer.put(texCoords)
-//		texCoordsBuffer.position(0)
-//
-//		// Create a buffer to hold the texCoords
-//		val texCoordBuffer = IntArray(1)
-//		GLES30.glGenBuffers(1, texCoordBuffer, 0)
-//		// Bind it to ARRAY_BUFFER (used for Vertex attributes)
-//		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texCoordBuffer[0])
-//		// upload the text corrds into the buffer
-//		GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, texCoordsBuffer.capacity() * 4, texCoordsBuffer, GLES30.GL_STATIC_DRAW)
-//		// turn it "on"
-//		GLES30.glEnableVertexAttribArray(this.attributes["a_texCoord"]!!)
-//		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-//		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
-//	}
-
 
 	//The main function executed on each image
 	//A Load the source textures
@@ -296,13 +252,11 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	fun render(yBytes: ByteArray, uBytes:ByteArray, vBytes: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
 		makeCurrent()
 		
-		//A: New code, load Y U V data into textures to use in image conversion
-		//TODO Should these  all be  the same size, or are u and v smaller than y?
- 		val (yTxt,uTxt,vTxt) = GLUtils.setupTextures(yBytes,uBytes,vBytes, width, height)
-		this.srcYTexture = yTxt
-		this.srcUTexture = uTxt
-		this.srcVTexture = vTxt
-	     
+		//A: Load Y U V data into existing textures to use in image conversion
+		GLUtils.updateTextures(yBytes,srcYTexture, uBytes, srcUTexture, vBytes, srcVTexture, width, height)
+
+
+	/*	Do nothing except load the data
 		//B: Run conversion shader with these textures as the inputs to generate the output
 		//texture filterSrcTexture  
 		GLES30.glUseProgram(this.yuvConversionProgram)
@@ -322,12 +276,17 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glUniform1i(this.uniforms["u_image"]!!, 0)
 		GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + 0)
 		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, filterSrcTexture)
-	
+
+	 */
+		/* debugging texture input */
+ 	    val colour = GLUtils.randomColor()
+
 		// Unbind any output frame buffer that may have been bound by other OpenGL programs (so we render to the default display)
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 	
 		GLES30.glViewport(0, 0, width, height)
-		GLES30.glClearColor(0f, 0f, 0f, 0f)
+		//GLES30.glClearColor(0f, 0f, 0f, 0f)
+		GLES30.glClearColor(colour.red, colour.green, colour.blue, 0f)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
 	
 		// Draw the rectangles we put in the vertex shader
@@ -338,7 +297,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLUtils.checkEglError("eglSwapBuffers")
  
 		//D: Output the changed texture to a file on a background thread
-
 
 	}
 
