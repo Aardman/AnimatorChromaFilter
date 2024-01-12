@@ -57,26 +57,6 @@ object GLUtils {
 		return program
 	}
 
-	fun createTextureFromPlane(planeData: ByteArray, width: Int, height: Int): Int {
-		val textureHandle = IntArray(1)
-
-		// Generate a texture ID
-		GLES30.glGenTextures(1, textureHandle, 0)
-		val textureId = textureHandle[0]
-
-		// Bind to the texture in OpenGL
-		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureId)
-
-		// Set filtering
-		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
-		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
-
-		// Load the plane data into the texture
-		GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_LUMINANCE, width, height, 0, GLES30.GL_LUMINANCE, GLES30.GL_UNSIGNED_BYTE, ByteBuffer.wrap(planeData))
-
-		return textureId
-	}
-
 	fun updateTextureFromPlane(textureId: Int, planeData: ByteArray, width: Int, height: Int) {
 		// Bind to the existing texture in OpenGL
 		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureId)
@@ -93,15 +73,6 @@ object GLUtils {
 		val uTexture = updateTextureFromPlane(uTextureId,uPlane, width / 2, height / 2) // Assuming chroma planes are half the size of luma for YUV420_888 in Android
 		val vTexture = updateTextureFromPlane(vTextureId,vPlane, width / 2, height / 2)
  	}
-
-
-	fun setupTextures(yPlane: ByteArray, uPlane: ByteArray, vPlane: ByteArray, width: Int, height: Int): Triple<Int, Int, Int> {
-		val yTexture = createTextureFromPlane(yPlane, width, height)
-		val uTexture = createTextureFromPlane(uPlane, width / 2, height / 2) // Assuming chroma planes are half the size of luma for YUV420_888 in Android
-		val vTexture = createTextureFromPlane(vPlane, width / 2, height / 2)
-
-		return Triple(yTexture, uTexture, vTexture)
-	}
 
 	fun createTexture(width: Int, height: Int, internalFormat: Int = GLES30.GL_RGBA, format: Int = GLES30.GL_RGBA, type: Int = GLES30.GL_UNSIGNED_BYTE): Int {
 		val texture = IntArray(1)
