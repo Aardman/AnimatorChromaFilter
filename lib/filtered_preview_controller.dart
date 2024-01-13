@@ -14,6 +14,10 @@ class FilteredPreviewController {
     bool _isDisposed = false;
     bool _initialized = false;
 
+    var time = 0;
+    var iterations = 0;
+
+
 //Getters 
  bool get initialized {
     return _initialized;
@@ -61,26 +65,54 @@ class FilteredPreviewController {
   }
 
 //API
- 
-   Future<void> update(CameraImage cameraImage) async {
-  
+
+  Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
     }
 
-    Uint8List yBytes = cameraImage.planes[0].bytes; // Y plane
-    Uint8List uBytes = cameraImage.planes[1].bytes; // U plane
-    Uint8List vBytes = cameraImage.planes[2].bytes; // V plane
- 
-    // Call the filter update method on the native platform 
-    final params = {'Y': yBytes, 'U': uBytes, 'V': vBytes,'width': width, 'height': height}; 
-    await _channel.invokeMethod('update', params);
-  }   
- 
+    if (cameraImage == null || cameraImage.planes == null) {
+      print('Camera image or planes are null');
+      return;
+    }
+
+    try {
+      Uint8List yBytes = cameraImage.planes[0].bytes; // Y plane
+      Uint8List uBytes = cameraImage.planes[1].bytes; // U plane
+      Uint8List vBytes = cameraImage.planes[2].bytes; // V plane
+
+      if (yBytes == null || uBytes == null || vBytes == null) {
+        print('One of the planes is null');
+        return;
+      }
+
+      // Call the filter update method on the native platform
+      final params = {
+        'Y': yBytes,
+        'U': uBytes,
+        'V': vBytes,
+        'width': width,
+        'height': height
+      };
+      await _channel.invokeMethod('update', params);
+    } catch (e) {
+      print('Error processing camera image: $e');
+    }
+  }
+
+  //TODO delete before delivery  - average 15 msec to update textures on each pass
    //Profiling code
     //Stopwatch stopwatch  = Stopwatch()..start(); 
     //Uint8List formattedImage =ImageProcessor.getBytes(cameraImage);  
     //stopwatch.stop();
     //print('update executed  in  ${stopwatch.elapsedMilliseconds}');
+  // stopwatch.stop();
+  //
+  // time += stopwatch.elapsedMilliseconds;
+  // iterations = iterations + 1;
+  //
+  // if (iterations >= 1000){
+  // print('1000 updates executed in average of ${time/iterations}');
+  // }
     
 }
