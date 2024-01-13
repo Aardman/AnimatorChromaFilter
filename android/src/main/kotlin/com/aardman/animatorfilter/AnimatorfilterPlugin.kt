@@ -51,9 +51,9 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
         if (filterPipeline != null) {
           
           // Get the image planes from the YUV420 input
-          val y = call.argument<ByteArray>("yBytes") 
-          val u = call.argument<ByteArray>("uBytes") 
-          val v = call.argument<ByteArray>("vBytes") 
+          val y = call.argument<ByteArray>("Y")
+          val u = call.argument<ByteArray>("U")
+          val v = call.argument<ByteArray>("V")
           val width = call.argument<Int>("width")!!
           val height = call.argument<Int>("height")!!
            
