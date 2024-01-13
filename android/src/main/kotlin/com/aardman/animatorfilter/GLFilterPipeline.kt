@@ -107,7 +107,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		setupOpenGLObjects()
 	}
 
-
 	private fun eglSetup() {
 		// Create EGL display that will output to the given outSurface
 		mEGLDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
@@ -159,10 +158,10 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	}
 
 	private fun setupOpenGLObjects() {
-//		setupCoordinates()
-//		setupConverter()
-//		setupFilter()
+ 		setupCoordinates()
+ 		setupFilter()
 		setupTextures()
+	    setupConverter()
 	}
 
 	private fun setupTextures(){
@@ -247,37 +246,45 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	//The main function executed on each image
 	//A Load the source textures
 	//B Convert them to an RGB texture for input to filtering
-	//C Run the filter on the RGB texture
+	//C Run the filters on the RGB texture
 	//D Output the resulting texture to a file in a new thread
 	fun render(yBytes: ByteArray, uBytes:ByteArray, vBytes: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
 		makeCurrent()
-		
-		//A: Load Y U V data into existing textures to use in image conversion
+
+		// *** A ****
+ 	    //Load Y U V data into existing textures to use in image conversion
 		GLUtils.updateTextures(yBytes,srcYTexture, uBytes, srcUTexture, vBytes, srcVTexture, width, height)
 
+		// *** B ****
+		convertYUV(width, height)
 
-	/*	Do nothing except load the data
-		//B: Run conversion shader with these textures as the inputs to generate the output
-		//texture filterSrcTexture  
-		GLES30.glUseProgram(this.yuvConversionProgram)
+		//The texture filterSrcTexture now contains the results of the conversion
 
- 
-		//C Apply the filter shader/s
-	
-		// Tell it to use our program
-		GLES30.glUseProgram(this.gaussianProgram)
-	
-		// Set u_radius in the fragment shader
-		GLES30.glUniform1f(this.uniforms["u_radius"]!!, radius)
-	
-		GLES30.glUniform1f(this.uniforms["u_flipY"]!!, if (flip) -1f else 1f) // Need to y flip for canvas
-	
-		// Tell the shader to get the texture from filterSrcTexture now in RGB format
-		GLES30.glUniform1i(this.uniforms["u_image"]!!, 0)
-		GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + 0)
-		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, filterSrcTexture)
+		// *** E ****
 
-	 */
+		//Draw the filterSrcTexture to the screen
+
+		// This "draws" the result onto the surface we got from Flutter
+		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
+		GLUtils.checkEglError("eglSwapBuffers")
+
+		/*
+            //C Apply the filter shader/s
+
+            // Tell it to use our program
+            GLES30.glUseProgram(this.gaussianProgram)
+
+            // Set u_radius in the fragment shader
+            GLES30.glUniform1f(this.uniforms["u_radius"]!!, radius)
+
+            GLES30.glUniform1f(this.uniforms["u_flipY"]!!, if (flip) -1f else 1f) // Need to y flip for canvas
+
+            // Tell the shader to get the texture from filterSrcTexture now in RGB format
+            GLES30.glUniform1i(this.uniforms["u_image"]!!, 0)
+            GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + 0)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, filterSrcTexture)
+
+         */
 		/* debugging texture input */
  	    val colour = GLUtils.randomColor()
 
@@ -299,6 +306,31 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		//D: Output the changed texture to a file on a background thread
 
 	}
+
+	//Converts the srcYUV textures to RGB and stores in filterSrcTexture
+	private fun convertYUV(width: Int, height: Int) {
+		//Use conversion program and set parameters
+		GLES30.glUseProgram(this.yuvConversionProgram)
+		GLES30.glUniform1i(this.uniforms["yTexture"]!!, this.srcYTexture)
+		GLES30.glUniform1i(this.uniforms["uTexture"]!!, this.srcUTexture)
+		GLES30.glUniform1i(this.uniforms["vTexture"]!!, this.srcVTexture)
+
+		// Setup an FBO, framebuffer object to store the output of the conversion
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 1)
+		GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, filterSrcTexture, 0)
+
+		//Set the viewport
+		GLES30.glViewport(0, 0, width, height)
+		GLES30.glClearColor(1f, 0f, 0f, 0f)
+		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
+
+		//Draw to the texture using the program
+		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
+
+		//Unbind the FBO
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+	}
+
 
 	fun destroy() {
 
