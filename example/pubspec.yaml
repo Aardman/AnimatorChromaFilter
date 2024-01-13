@@ -16,7 +16,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  camera: ^0.9.4+5
+  camera: ^0.10.5+5
 
   animatorfilter:
     # When depending on this package from a real application you should use:
