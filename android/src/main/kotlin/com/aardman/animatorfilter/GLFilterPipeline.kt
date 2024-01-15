@@ -10,6 +10,7 @@ import java.nio.ByteOrder
 
 class GLFilterPipeline(private val outSurface: Surface, private val textureWidth:Int, private  val textureHeight:Int) {
 
+	//EGL
 	private var mEGLDisplay = EGL14.EGL_NO_DISPLAY
 	private var mEGLContext = EGL14.EGL_NO_CONTEXT
 	private var mEGLSurface = EGL14.EGL_NO_SURFACE
@@ -20,10 +21,16 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private var srcUTexture:Int = -1
 	private var srcVTexture:Int = -1
 
-	private var filterSrcTexture: Int = -1
+	//Main texture
+	private var workingTexture: Int = -1
 
 	//Filter
 	private var gaussianProgram: Int = -1
+
+	//Display
+	private var displayProgram: Int = -1
+
+	//Globals
 	private var attributes: MutableMap<String, Int> = hashMapOf()
 	private var uniforms: MutableMap<String, Int> = hashMapOf()
 	private var vao: IntArray = IntArray(1)
@@ -41,6 +48,8 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		1f, 1f
 	)
 
+	//Framebuffer
+	private var resultsFBO: Int = -1
 
 	//Demo filter to be replaced with ChromaKey filter
 	private val gaussianShader = """#version 300 es
@@ -101,6 +110,21 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		}
 	"""
 
+	private val displayShader = """#version 300 es
+		precision mediump float;
+		
+		uniform sampler2D displayTexture; 
+		in vec2 v_texCoord;
+		
+		out vec4 outColor;
+		
+		void main() { 
+		    vec4 texColor = texture(displayTexture, v_texCoord);
+        	outColor = vec4(texColor.r, texColor.g, texColor.b, 1.0);
+		}
+	"""
+
+
 	init {
 		eglSetup()
 		makeCurrent()
@@ -159,21 +183,23 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	private fun setupOpenGLObjects() {
  		setupCoordinates()
- 		setupFilter()
 		setupTextures()
+		setupResultsFBO()
 	    setupConverter()
-	}
-
-	private fun setupTextures(){
-		// Create the texture that will hold the source image
-		filterSrcTexture = GLUtils.createTexture(textureWidth, textureHeight)
-		srcYTexture = GLUtils.createTexture(textureWidth, textureHeight)
-		srcUTexture = GLUtils.createTexture(textureWidth/2, textureHeight/2)
-		srcVTexture = GLUtils.createTexture(textureWidth/2, textureHeight/2)
+		setupFilter()
+		setupDisplayShader()
 	}
 
 	private fun setupCoordinates(){
 		this.vao = setupVertexArray(texCoords)
+	}
+
+	private fun setupTextures(){
+		// Create the texture that will hold the source image
+		workingTexture = GLUtils.createTexture(textureWidth, textureHeight)
+		srcYTexture    = GLUtils.createTexture(textureWidth, textureHeight)
+		srcUTexture    = GLUtils.createTexture(textureWidth/2, textureHeight/2)
+		srcVTexture    = GLUtils.createTexture(textureWidth/2, textureHeight/2)
 	}
 
 	//We only need one vertex array in this case as texCoords are the same for each step
@@ -200,13 +226,46 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		return vao
 	}
 
+	//Set up the framebuffer that will be used to render the results
+	//Pre-conditions: Textures have been created
+	private fun setupResultsFBO() {
+		// Create a new framebuffer object
+		val frameBuffer = IntArray(1)
+		GLES30.glGenFramebuffers(1, frameBuffer, 0)
+		resultsFBO = frameBuffer[0]
+
+		// Check if the framebuffer was created successfully
+		if (resultsFBO <= 0) {
+			throw RuntimeException("Failed to create a new framebuffer object.")
+		}
+
+		//load the working texture to the framebuffer
+		GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, workingTexture, 0)
+
+		// Bind the framebuffer
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, resultsFBO)
+	}
+
 	private fun setupShaderProgram(vertexShaderSource: String, fragmentShaderSource: String): Int {
 		// Create and compile shaders, link program, etc.
-		var  program  = GLUtils.createProgram(
+		val program  = GLUtils.createProgram(
 			vertexShaderSource, fragmentShaderSource
 		)
 		return program
 	}
+
+	private fun setupDisplayShader() {
+		this.displayProgram  = setupShaderProgram(GLUtils.VertexShaderSource, displayShader)
+		// Get vertex shader attributes, this is the same for all shaders
+		this.attributes["d_texCoord"] = GLES30.glGetAttribLocation(this.displayProgram, "a_texCoord")
+		// Find uniforms
+		this.uniforms["workingTexture"] = GLES30.glGetUniformLocation(this.displayProgram, "displayTexture")
+		//Enable related attributes (might be in a more generic location, but this sequence is required
+		GLES30.glEnableVertexAttribArray(this.attributes["d_texCoord"]!!)
+		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
+		GLES30.glVertexAttribPointer(this.attributes["d_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
+	}
+
 
 	private fun setupFilter() {
 		this.gaussianProgram = setupShaderProgram(GLUtils.VertexShaderSource, gaussianShader)
@@ -257,57 +316,41 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		// *** B ****
 		convertYUV(width, height)
+		GLUtils.checkEglError("convertYUV")
+		//The texture workingTexture now contains the results of the conversion
 
-		//The texture filterSrcTexture now contains the results of the conversion
+		// *** C ****
+		//applyFilters()
 
 		// *** E ****
-
 		//Draw the filterSrcTexture to the screen
+		displayOutputTexture()
 
-		// This "draws" the result onto the surface we got from Flutter
-		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
-		GLUtils.checkEglError("eglSwapBuffers")
-
-		/*
-            //C Apply the filter shader/s
-
-            // Tell it to use our program
-            GLES30.glUseProgram(this.gaussianProgram)
-
-            // Set u_radius in the fragment shader
-            GLES30.glUniform1f(this.uniforms["u_radius"]!!, radius)
-
-            GLES30.glUniform1f(this.uniforms["u_flipY"]!!, if (flip) -1f else 1f) // Need to y flip for canvas
-
-            // Tell the shader to get the texture from filterSrcTexture now in RGB format
-            GLES30.glUniform1i(this.uniforms["u_image"]!!, 0)
-            GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + 0)
-            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, filterSrcTexture)
-
-         */
-		/* debugging texture input */
- 	    val colour = GLUtils.randomColor()
-
-		// Unbind any output frame buffer that may have been bound by other OpenGL programs (so we render to the default display)
-		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-	
-		GLES30.glViewport(0, 0, width, height)
-		//GLES30.glClearColor(0f, 0f, 0f, 0f)
-		GLES30.glClearColor(colour.red, colour.green, colour.blue, 0f)
-		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
-	
-		// Draw the rectangles we put in the vertex shader
-		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
-	
-		// This "draws" the result onto the surface we got from Flutter
-		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
-		GLUtils.checkEglError("eglSwapBuffers")
- 
 		//D: Output the changed texture to a file on a background thread
-
+        saveTextureToFile()
 	}
 
-	//Converts the srcYUV textures to RGB and stores in filterSrcTexture
+	private fun applyFilters(){
+		/*
+        //C Apply the filter shader/s
+
+        // Tell it to use our program
+        GLES30.glUseProgram(this.gaussianProgram)
+
+        // Set u_radius in the fragment shader
+        GLES30.glUniform1f(this.uniforms["u_radius"]!!, radius)
+
+        GLES30.glUniform1f(this.uniforms["u_flipY"]!!, if (flip) -1f else 1f) // Need to y flip for canvas
+
+        // Tell the shader to get the texture from filterSrcTexture now in RGB format
+        GLES30.glUniform1i(this.uniforms["u_image"]!!, 0)
+        GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + 0)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, filterSrcTexture)
+
+     */
+	}
+
+	//Converts the srcYUV textures to RGB and stores in workingTexture
 	private fun convertYUV(width: Int, height: Int) {
 		//Use conversion program and set parameters
 		GLES30.glUseProgram(this.yuvConversionProgram)
@@ -315,27 +358,61 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glUniform1i(this.uniforms["uTexture"]!!, this.srcUTexture)
 		GLES30.glUniform1i(this.uniforms["vTexture"]!!, this.srcVTexture)
 
-		// Setup an FBO, framebuffer object to store the output of the conversion
-		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 1)
-		GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, filterSrcTexture, 0)
-
 		//Set the viewport
 		GLES30.glViewport(0, 0, width, height)
 		GLES30.glClearColor(1f, 0f, 0f, 0f)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
 
-		//Draw to the texture using the program
+		//Draw to the currently bound texture using the program
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
-
-		//Unbind the FBO
-		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 	}
 
+	//Displays workingTexture to the screen
+	private fun displayOutputTexture() {
+		// Bind the default framebuffer to render to the screen
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+
+		// Set up the viewport, shader program, and other state as needed for rendering
+		GLES30.glViewport(0, 0, textureWidth, textureHeight)
+		GLES30.glUseProgram(displayProgram)
+
+		// Bind workingTexture to a texture unit and set the corresponding uniform in the shader
+		GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture)
+		GLES30.glUniform1i(uniforms["workingTexture"]!!, 0)  // Assuming a uniform for the texture in the shader
+
+		// Bind the VAO that contains the vertex data for the quad
+		GLES30.glBindVertexArray(vao[0])
+
+		// Draw the textured quad to the screen
+		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
+
+		// Unbind the VAO
+		GLES30.glBindVertexArray(0)
+
+		// Swap buffers to display the result
+		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
+		GLUtils.checkEglError("eglSwapBuffers")
+	}
+
+	private fun saveTextureToFile() {
+		//TBD
+	}
+
+	//EGL Lifecycle
+
+	private fun makeCurrent() {
+		EGL14.eglMakeCurrent(mEGLDisplay, mEGLSurface, mEGLSurface, mEGLContext)
+		GLUtils.checkEglError("eglMakeCurrent")
+	}
 
 	fun destroy() {
 
+		// Unbind the framebuffer by binding the default framebuffer, '0'
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+
 		//Delete textures
-		val texts = intArrayOf(this.filterSrcTexture, this.srcYTexture, this.srcUTexture, this.srcVTexture)
+		val texts = intArrayOf(this.workingTexture, this.srcYTexture, this.srcUTexture, this.srcVTexture)
 		GLES30.glDeleteTextures(texts.size, texts, 0)
 
 		if (mEGLDisplay !== EGL14.EGL_NO_DISPLAY) {
@@ -351,9 +428,29 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		mEGLSurface = EGL14.EGL_NO_SURFACE
 	}
 
-	private fun makeCurrent() {
-		EGL14.eglMakeCurrent(mEGLDisplay, mEGLSurface, mEGLSurface, mEGLContext)
-		GLUtils.checkEglError("eglMakeCurrent")
+
+	private fun stuff(){
+		/* debugging texture input */
+		// 	    val colour = GLUtils.randomColor()
+		//
+		//		// Unbind any output frame buffer that may have been bound by other OpenGL programs (so we render to the default display)
+		//		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+		//
+		//		GLES30.glViewport(0, 0, width, height)
+		//		//GLES30.glClearColor(0f, 0f, 0f, 0f)
+		//		GLES30.glClearColor(colour.red, colour.green, colour.blue, 0f)
+		//		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
+		//
+		//		// Draw the rectangles we put in the vertex shader
+		//		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
+		//
+		//		// This maps the result onto the Flutter surface
+		//		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
+		//		GLUtils.checkEglError("eglSwapBuffers")
+		//
 	}
+
+
+
 }
  
