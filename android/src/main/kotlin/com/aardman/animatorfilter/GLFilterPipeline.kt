@@ -6,6 +6,7 @@ import android.opengl.EGLExt
 import android.opengl.GLES30
 import android.opengl.GLES30.glBindVertexArray
 import android.view.Surface
+import com.aardman.animatorfilter.GLUtils.checkEglError
 import com.aardman.animatorfilter.GLUtils.setupShaderProgram
 
 class GLFilterPipeline(private val outSurface: Surface, private val textureWidth:Int, private  val textureHeight:Int) {
@@ -212,11 +213,19 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 			throw RuntimeException("Failed to create a new framebuffer object.")
 		}
 
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, resultsFBO)
+
 		//load the working texture to the framebuffer
 		GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, workingTexture, 0)
 
-		// Bind the framebuffer
-		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, resultsFBO)
+		// Check if the framebuffer is complete
+		if (GLES30.glCheckFramebufferStatus(GLES30.GL_FRAMEBUFFER) != GLES30.GL_FRAMEBUFFER_COMPLETE) {
+			throw RuntimeException("Framebuffer is not complete.")
+		}
+
+		// Unbind the framebuffer
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+
 	}
 
 	private fun setupConverter() {
@@ -233,8 +242,10 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		//Enable related attributes (might be in a more generic location, but this sequence is required
 		GLES30.glEnableVertexAttribArray(this.attributes["c_texCoord"]!!)
+		checkEglError("enableVertexAttribArray")
 		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
 		GLES30.glVertexAttribPointer(this.attributes["c_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
+		checkEglError("glVertexAttribPointer")
 
 		this.yuvConversionVAO = GLUtils.setupVertexArrayForProgram(yuvConversionProgram, "a_texCoords", texCoords)
 	}
@@ -304,6 +315,9 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	//Converts the srcYUV textures to RGB and stores in workingTexture
 	private fun convertYUV(width: Int, height: Int) {
 
+		// Bind the framebuffer
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, resultsFBO)
+
 		//Use conversion program and set parameters
 		GLES30.glUseProgram(this.yuvConversionProgram)
 		GLES30.glUniform1i(this.uniforms["yTexture"]!!, this.srcYTexture)
@@ -323,6 +337,9 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		//Unbind vao
 		glBindVertexArray(0)
+
+		// Unbind the framebuffer
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 	}
 
 	//Displays workingTexture to the screen
