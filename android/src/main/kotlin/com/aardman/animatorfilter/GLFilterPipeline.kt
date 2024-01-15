@@ -123,7 +123,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		
 		void main() { 
 		    vec4 texColor = texture(displayTexture, v_texCoord);
-        	outColor = vec4(texColor.r, texColor.g, texColor.b, 1.0);
+            outColor = vec4(texColor.r, texColor.g, texColor.b, 1.0);
 		}
 	"""
 
@@ -326,7 +326,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		//Set the viewport
 		GLES30.glViewport(0, 0, width, height)
-		GLES30.glClearColor(1f, 0f, 0f, 0f)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
 
 		//Bind the VAO
@@ -350,6 +349,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		// Set up the viewport, shader program, and other state as needed for rendering
 		GLES30.glViewport(0, 0, textureWidth, textureHeight)
+		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
 		GLES30.glUseProgram(displayProgram)
 
 		// Bind workingTexture to a texture unit and set the corresponding uniform in the shader
