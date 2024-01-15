@@ -6,6 +6,7 @@ import android.opengl.GLES30
 import android.util.Log
 import java.nio.Buffer
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import kotlin.random.Random
 
 object GLUtils {
@@ -54,6 +55,14 @@ object GLUtils {
 		GLES30.glAttachShader(program, fragmentShader)
 		GLES30.glLinkProgram(program)
 
+		return program
+	}
+
+	 fun setupShaderProgram(vertexShaderSource: String, fragmentShaderSource: String): Int {
+		// Create and compile shaders, link program, etc.
+		val program  = GLUtils.createProgram(
+			vertexShaderSource, fragmentShaderSource
+		)
 		return program
 	}
 
@@ -119,6 +128,34 @@ object GLUtils {
 		}
 
 		return shader
+	}
+
+	// Sets up a vertex array for a given shader program and attribute name
+    fun setupVertexArrayForProgram(programId: Int, attributeName: String, texCoords: FloatArray): Int {
+		val vao = IntArray(1)
+		GLES30.glGenVertexArrays(1, vao, 0)
+		checkEglError("generate vertex arrays")
+		GLES30.glBindVertexArray(vao[0])
+
+		// Other buffer setup code remains the same...
+		val texCoordsBuffer = ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+			put(texCoords)
+			position(0)
+		}
+
+		val texCoordBuffer = IntArray(1)
+		GLES30.glGenBuffers(1, texCoordBuffer, 0)
+		checkEglError("generate texCoord buffer")
+		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texCoordBuffer[0])
+		GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, texCoordsBuffer.capacity() * 4, texCoordsBuffer, GLES30.GL_STATIC_DRAW)
+
+		// Get attribute location for the specific shader program
+		val texCoordLocation = GLES30.glGetAttribLocation(programId, attributeName)
+		checkEglError("getTexCoordLocation")
+		GLES30.glEnableVertexAttribArray(texCoordLocation)
+		GLES30.glVertexAttribPointer(texCoordLocation, 2, GLES30.GL_FLOAT, false, 0, 0)
+
+		return vao[0]
 	}
 
 	//TODO delete after performance poc  test
