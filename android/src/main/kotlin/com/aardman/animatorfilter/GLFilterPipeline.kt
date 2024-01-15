@@ -116,7 +116,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private val displayShader = """#version 300 es
 		precision mediump float;
 		
-		uniform sampler2D displayTexture; 
+		uniform sampler2D workingTexture; 
 		in vec2 v_texCoord;
 		
 		out vec4 outColor;
@@ -255,7 +255,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		// Get vertex shader attributes, this is the same for all shaders
 		this.attributes["d_texCoord"] = GLES30.glGetAttribLocation(this.displayProgram, "a_texCoord")
 		// Find uniforms
-		this.uniforms["workingTexture"] = GLES30.glGetUniformLocation(this.displayProgram, "displayTexture")
+		this.uniforms["workingTexture"] = GLES30.glGetUniformLocation(this.displayProgram, "workingTexture")
 		//Enable related attributes (might be in a more generic location, but this sequence is required
 		GLES30.glEnableVertexAttribArray(this.attributes["d_texCoord"]!!)
 		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
