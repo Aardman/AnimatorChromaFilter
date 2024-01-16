@@ -39,8 +39,13 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
     private var attributes: MutableMap<String, Int> = hashMapOf()
     private var uniforms: MutableMap<String, Int> = hashMapOf()
 
-    //Main texture
-    private var workingTexture: Int = -1
+    //Main textures used for processing stages
+    private var workingTexture1: Int = -1
+    private var workingTexture2: Int = -1
+
+    //Background texture
+    private var backgroundTexture: Int = -1
+
 
     // 2D quad coordinates for the vertex shader, we use 2 triangles that will cover
     // the entire image
@@ -55,8 +60,8 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
         1f, 1f
     )
 
-    //Framebuffer
-    private var resultsFBO: Int = -1
+    //Framebuffers
+    private var workingFBO1: Int = -1
 
     init {
         eglSetup()
@@ -125,7 +130,9 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
 
     private fun setupTextures(){
         // Create the texture that will hold the source image
-        workingTexture = GLUtils.createTexture(textureWidth, textureHeight)
+        workingTexture1   = GLUtils.createTexture(textureWidth, textureHeight)
+        workingTexture2   = GLUtils.createTexture(textureWidth, textureHeight)
+        backgroundTexture = GLUtils.createTexture(textureWidth, textureHeight)
         srcYTexture    = GLUtils.createTexture(textureWidth, textureHeight)
         srcUTexture    = GLUtils.createTexture(textureWidth/2, textureHeight/2)
         srcVTexture    = GLUtils.createTexture(textureWidth/2, textureHeight/2)
@@ -137,17 +144,17 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
         // Create a new framebuffer object
         val frameBuffer = IntArray(1)
         GLES30.glGenFramebuffers(1, frameBuffer, 0)
-        resultsFBO = frameBuffer[0]
+        workingFBO1 = frameBuffer[0]
 
         // Check if the framebuffer was created successfully
-        if (resultsFBO <= 0) {
+        if (workingFBO1 <= 0) {
             throw RuntimeException("Failed to create a new framebuffer object.")
         }
 
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, resultsFBO)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO1)
 
         //load the working texture to the framebuffer
-        GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, workingTexture, 0)
+        GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, workingTexture1, 0)
 
         // Check if the framebuffer is complete
         if (GLES30.glCheckFramebufferStatus(GLES30.GL_FRAMEBUFFER) != GLES30.GL_FRAMEBUFFER_COMPLETE) {
@@ -178,7 +185,7 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
         GLES30.glVertexAttribPointer(this.attributes["c_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
         checkEglError("glVertexAttribPointer")
 
-        this.yuvConversionVAO = GLUtils.setupVertexArrayForProgram(yuvConversionProgram, "a_texCoords", texCoords)
+        this.yuvConversionVAO = GLUtils.setupVertexArrayForProgram(yuvConversionProgram)
     }
 
     private fun setupDisplayShader() {
@@ -192,7 +199,7 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
         // Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
         GLES30.glVertexAttribPointer(this.attributes["d_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 
-        this.displayVAO = GLUtils.setupVertexArrayForProgram(displayProgram, "a_texCoords", texCoords)
+        this.displayVAO = GLUtils.setupVertexArrayForProgram(displayProgram)
     }
 
     private fun setupFilter() {
@@ -211,7 +218,7 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
         // Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
         GLES30.glVertexAttribPointer(this.attributes["f_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 
-        this.filterVAO = GLUtils.setupVertexArrayForProgram(filterProgram,"a_texCoords", texCoords)
+        this.filterVAO = GLUtils.setupVertexArrayForProgram(filterProgram)
     }
 
     private fun setupTestQuadShader() {
@@ -228,7 +235,7 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
         // Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
         GLES30.glVertexAttribPointer(this.attributes["debug_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 
-        this.testQuadVAO = GLUtils.setupVertexArrayForProgram(filterProgram,"a_texCoords", texCoords)
+        this.testQuadVAO = GLUtils.setupVertexArrayForProgram(filterProgram)
     }
 
 
@@ -289,7 +296,7 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
     private fun convertYUV(width: Int, height: Int) {
 
         // Bind the framebuffer
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, resultsFBO)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO1)
 
         //Use conversion program and set parameters
         GLES30.glUseProgram(this.yuvConversionProgram)
@@ -327,7 +334,7 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
 
         // Bind workingTexture to a texture unit and set the corresponding uniform in the shader
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture1)
         GLES30.glUniform1i(uniforms["workingTexture"]!!, 0)  // Assuming a uniform for the texture in the shader
 
         // Bind the VAO that contains the vertex data for the quad
@@ -365,7 +372,6 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
      */
     }
 
-
     private fun saveTextureToFile() {
         //TBD
     }
@@ -383,7 +389,7 @@ class GLFilterPipeline_original(private val outSurface: Surface, private val tex
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 
         //Delete textures
-        val texts = intArrayOf(this.workingTexture, this.srcYTexture, this.srcUTexture, this.srcVTexture)
+        val texts = intArrayOf(this.workingTexture1, this.srcYTexture, this.srcUTexture, this.srcVTexture)
         GLES30.glDeleteTextures(texts.size, texts, 0)
 
         if (mEGLDisplay !== EGL14.EGL_NO_DISPLAY) {
