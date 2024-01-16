@@ -4,12 +4,10 @@ import android.opengl.EGL14
 import android.opengl.EGLConfig
 import android.opengl.EGLExt
 import android.opengl.GLES30
+import android.opengl.GLES30.glBindVertexArray
 import android.view.Surface
 import com.aardman.animatorfilter.GLUtils.checkEglError
 import com.aardman.animatorfilter.GLUtils.setupShaderProgram
-import com.aardman.animatorfilter.GLUtils.setupVertexArrayForProgram
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 class GLFilterPipeline(private val outSurface: Surface, private val textureWidth:Int, private  val textureHeight:Int) {
 
@@ -117,41 +115,23 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	}
 
 	private fun setupOpenGLObjects() {
-		setupCoordsVBO()
 		setupTestQuadShader()
 	}
 
-	private fun setupCoordsVBO() {
-		// Other buffer setup code remains the same...
-		val texCoordsBuffer = ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
-			put(texCoords)
-			position(0)
-		}
-
-		val texCoordBuffer = IntArray(1)
-		GLES30.glGenBuffers(1, texCoordBuffer, 0)
-		checkEglError("generate texCoord buffer")
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texCoordBuffer[0])
-		checkEglError("bind coord buffer")
-		GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, texCoordsBuffer.capacity() * 4, texCoordsBuffer, GLES30.GL_STATIC_DRAW)
-	}
-
 	private fun setupTestQuadShader() {
-		this.testQuadProgram = setupShaderProgram(TestVertexShader, RedFragmentShader)
+		this.testQuadProgram = setupShaderProgram(TestVertexShader, DebugFragmentShader)
 
 		// ... other specific setups like uniforms
 		// Get vertex shader attributes
 		this.attributes["a_texCoord"] = GLES30.glGetAttribLocation(this.testQuadProgram, "a_texCoord")
-		checkEglError("glGetAttribLocation a_texCoord")
-
-		testQuadVAO = setupVertexArrayForProgram(testQuadProgram)
-		checkEglError("generate vertex arrays")
-		GLES30.glBindVertexArray(testQuadVAO)
+		// Find uniforms
 
 		//Enable related attributes (might be in a more generic location, but this sequence is required
 		GLES30.glEnableVertexAttribArray(this.attributes["a_texCoord"]!!)
 		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
 		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
+
+		this.testQuadVAO = GLUtils.setupVertexArrayForProgram(testQuadProgram,"a_texCoords", texCoords)
 	}
 
 
@@ -162,8 +142,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	}
 
 	private fun displayTestQuad() {
-		// Disable depth testing for 2D rendering
-		GLES30.glDisable(GLES30.GL_DEPTH_TEST)
 
 		// Set up the viewport, shader program, and other state as needed for rendering
 		GLES30.glViewport(0, 0, textureWidth, textureHeight)
@@ -173,7 +151,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		// Bind the VAO that contains the vertex data for the quad
 		GLES30.glBindVertexArray(testQuadVAO)
-		checkEglError("bind vertex array")
 
 		// Draw the solid debug quad to the screen
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
@@ -215,7 +192,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		mEGLContext = EGL14.EGL_NO_CONTEXT
 		mEGLSurface = EGL14.EGL_NO_SURFACE
 	}
-
 }
 
 public val TestVertexShader = """#version 300 es
@@ -231,13 +207,13 @@ public val TestVertexShader = """#version 300 es
 """
 
 
-//Just outputs red for every pixel
-public var RedFragmentShader = """#version 300 es
-		precision mediump float;
-		  
-		out vec4 outColor;
-		
-		void main() {  
-            outColor = vec4(1f, 0f, 0f, 1.0);
-		}
-	"""
+ //Just outputs red for every pixel
+ public var DebugFragmentShader = """#version 300 es
+ 		precision mediump float;
+
+ 		out vec4 outColor;
+
+ 		void main() {
+             outColor = vec4(1f, 0f, 0f, 1.0);
+ 		}
+ 	"""

@@ -11,30 +11,6 @@ import kotlin.random.Random
 
 object GLUtils {
 
-	var VertexShaderSource = """#version 300 es
-	// vertex value between 0-1
-	in vec2 a_texCoord;
-
-	uniform float u_flipY;
-
-	// Used to pass the texture coordinates to the fragment shader
-	out vec2 v_texCoord;
-
-	// all shaders have a main function
-	void main() {
-		// convert from 0->1 to 0->2
-		vec2 zeroToTwo = a_texCoord * 2.0;
-
-		// convert from 0->2 to -1->+1 (clipspace)
-		vec2 clipSpace = zeroToTwo - 1.0;
-
-		gl_Position = vec4(clipSpace * vec2(1, u_flipY), 0, 1);
-
-		// pass the texCoord to the fragment shader
-		// The GPU will interpolate this value between points.
-		v_texCoord = a_texCoord;
-	}	"""
-
 	fun createProgram(vertexSource: String, fragmentSource: String): Int {
 		val vertexShader = buildShader(GLES30.GL_VERTEX_SHADER, vertexSource)
 		if (vertexShader == 0) {
@@ -50,6 +26,7 @@ object GLUtils {
 		if (program == 0) {
 			return 0
 		}
+		checkEglError("create program ${fragmentSource.substring(0..40)}")
 
 		GLES30.glAttachShader(program, vertexShader)
 		GLES30.glAttachShader(program, fragmentShader)
@@ -63,6 +40,7 @@ object GLUtils {
 		val program  = GLUtils.createProgram(
 			vertexShaderSource, fragmentShaderSource
 		)
+        checkEglError("setUpShaderProgram")
 		return program
 	}
 
@@ -108,6 +86,9 @@ object GLUtils {
 		if (error != EGL14.EGL_SUCCESS) {
 			throw RuntimeException(msg + ": EGL error: 0x" + Integer.toHexString(error))
 		}
+		else {
+			print(msg + "\n")
+		}
 	}
 
 	private fun buildShader(type: Int, shaderSource: String): Int {
@@ -118,6 +99,7 @@ object GLUtils {
 
 		GLES30.glShaderSource(shader, shaderSource)
 		GLES30.glCompileShader(shader)
+		checkEglError("compile shader")
 
 		val status = IntArray(1)
 		GLES30.glGetShaderiv(shader, GLES30.GL_COMPILE_STATUS, status, 0)
@@ -131,46 +113,11 @@ object GLUtils {
 	}
 
 	// Sets up a vertex array for a given shader program and attribute name
-    fun setupVertexArrayForProgram(programId: Int, attributeName: String, texCoords: FloatArray): Int {
+    fun setupVertexArrayForProgram(programId: Int): Int {
 		val vao = IntArray(1)
 		GLES30.glGenVertexArrays(1, vao, 0)
 		checkEglError("generate vertex arrays")
-		GLES30.glBindVertexArray(vao[0])
-
-		// Other buffer setup code remains the same...
-		val texCoordsBuffer = ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
-			put(texCoords)
-			position(0)
-		}
-
-		val texCoordBuffer = IntArray(1)
-		GLES30.glGenBuffers(1, texCoordBuffer, 0)
-		checkEglError("generate texCoord buffer")
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texCoordBuffer[0])
-		GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, texCoordsBuffer.capacity() * 4, texCoordsBuffer, GLES30.GL_STATIC_DRAW)
-
-		// Get attribute location for the specific shader program
-		val texCoordLocation = GLES30.glGetAttribLocation(programId, attributeName)
-		checkEglError("getTexCoordLocation")
-		GLES30.glEnableVertexAttribArray(texCoordLocation)
-		GLES30.glVertexAttribPointer(texCoordLocation, 2, GLES30.GL_FLOAT, false, 0, 0)
-
 		return vao[0]
 	}
-
-	//TODO delete after performance poc  test
-	// Define a data class to hold the RGBA values
-	data class Color(val red: Float, val green: Float, val blue: Float, val alpha: Float)
-
-	// Function to generate a random color
-	 fun randomColor(): Color {
-		return Color(
-			red = Random.nextFloat(),
-			green = Random.nextFloat(),
-			blue = Random.nextFloat(),
-			alpha = Random.nextFloat()
-		)
-	}
-
 
 }
