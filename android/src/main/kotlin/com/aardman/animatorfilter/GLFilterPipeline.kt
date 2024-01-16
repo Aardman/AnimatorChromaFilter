@@ -41,8 +41,10 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private var attributes: MutableMap<String, Int> = hashMapOf()
 	private var uniforms: MutableMap<String, Int> = hashMapOf()
 
-	//Main texture
-	private var workingTexture: Int = -1
+	//Main textures
+	private var workingTexture1: Int = -1
+	private var workingTexture2: Int = -1
+	private var backgroundTexture: Int = -1
 
 	// 2D quad coordinates for the vertex shader, we use 2 triangles that will cover
 	// the entire image
@@ -58,7 +60,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	)
 
 	//Framebuffer
-	private var resultsFBO: Int = -1
+	private var workingFBO1: Int = -1
 
 	init {
 		eglSetup()
@@ -119,7 +121,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private fun setupOpenGLObjects() {
 		setupCoordsVBO()
 		setupTextures()
-		setupResultsFBO()
+		setupWorkingFBO1()
 		setupConverter()
 		//setupFilter()
 		setupDisplayShader()
@@ -128,7 +130,9 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	private fun setupTextures(){
 		// Create the texture that will hold the source image
-		workingTexture = GLUtils.createTexture(textureWidth, textureHeight)
+		workingTexture1 = GLUtils.createTexture(textureWidth, textureHeight)
+		workingTexture2 = GLUtils.createTexture(textureWidth, textureHeight)
+		backgroundTexture = GLUtils.createTexture(textureWidth, textureHeight)
 		srcYTexture    = GLUtils.createTexture(textureWidth, textureHeight)
 		srcUTexture    = GLUtils.createTexture(textureWidth/2, textureHeight/2)
 		srcVTexture    = GLUtils.createTexture(textureWidth/2, textureHeight/2)
@@ -136,21 +140,21 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	//Set up the framebuffer that will be used to render the results
 	//Pre-conditions: Textures have been created
-	private fun setupResultsFBO() {
+	private fun setupWorkingFBO1() {
 		// Create a new framebuffer object
 		val frameBuffer = IntArray(1)
 		GLES30.glGenFramebuffers(1, frameBuffer, 0)
-		resultsFBO = frameBuffer[0]
+		workingFBO1 = frameBuffer[0]
 
 		// Check if the framebuffer was created successfully
-		if (resultsFBO <= 0) {
+		if (workingFBO1 <= 0) {
 			throw RuntimeException("Failed to create a new framebuffer object.")
 		}
 
-		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, resultsFBO)
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO1)
 
 		//load the working texture to the framebuffer
-		GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, workingTexture, 0)
+		GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, workingTexture1, 0)
 
 		// Check if the framebuffer is complete
 		if (GLES30.glCheckFramebufferStatus(GLES30.GL_FRAMEBUFFER) != GLES30.GL_FRAMEBUFFER_COMPLETE) {
@@ -247,10 +251,12 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 	}
 
+
+
 	//The main function executed on each image
 	fun render(yBytes: ByteArray, uBytes:ByteArray, vBytes: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
 		makeCurrent()
-		 displayTestQuad()
+		//displayTestQuad()
 
 		// *** A ****
 		//Load Y U V data into existing textures to use in image conversion
@@ -265,6 +271,11 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		//applyFilters()
 
 		// *** E ****
+
+		//TODO Delete test code
+		//Fill the working texture with solid red for a test rendering
+		populateTestTexture()
+
 		//Draw the filterSrcTexture to the screen
 		displayOutputTexture()
 
@@ -277,7 +288,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private fun convertYUV(width: Int, height: Int) {
 
 		// Bind the framebuffer where workingTexture is enabled
-		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, resultsFBO)
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO1)
 
 		//Use conversion program and set parameters
 		GLES30.glUseProgram(this.yuvConversionProgram)
@@ -307,15 +318,18 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		// Bind the default framebuffer to render to the screen
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+		GLUtils.checkEglError("Binding FBO texture")
 
 		// Set up the viewport, shader program, and other state as needed for rendering
 		GLES30.glViewport(0, 0, textureWidth, textureHeight)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
 		GLES30.glUseProgram(displayProgram)
+		GLUtils.checkEglError("glUseProgram displayProgram")
 
 		// Bind workingTexture to a texture unit and set the corresponding uniform in the shader
 		GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture)
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture1)
+		GLUtils.checkEglError("Bind FBO texture")
 		GLES30.glUniform1i(uniforms["workingTexture"]!!, 0)  // Assuming a uniform for the texture in the shader
 
 		// Bind the VAO that contains the vertex data for the quad
@@ -327,9 +341,45 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		// Unbind the VAO
 		GLES30.glBindVertexArray(0)
 
+		//Unbind the texture
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+
 		// Swap buffers to display the result
 		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
 		GLUtils.checkEglError("eglSwapBuffers")
+
+	}
+
+	//Uses same program as the test quad but renders it to the workingTexture in the framebuffer
+	private fun populateTestTexture(){
+
+		// Bind the framebuffer where workingTexture is enabled
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO1)
+		checkEglError("bind framebuffer")
+
+		// Disable depth testing for 2D rendering
+		GLES30.glDisable(GLES30.GL_DEPTH_TEST)
+
+		// Set up the viewport, shader program, and other state as needed for rendering
+		GLES30.glViewport(0, 0, textureWidth, textureHeight)
+		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+		GLES30.glUseProgram(testQuadProgram)
+		GLUtils.checkEglError("Use testQuadProgram")
+
+		// Bind the VAO that contains the vertex data for the quad
+		GLES30.glBindVertexArray(testQuadVAO)
+		checkEglError("bind VAO")
+
+		// Draw the solid debug quad to the screen
+		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
+		checkEglError("glDrawArrays")
+
+		// Unbind the VAO
+		GLES30.glBindVertexArray(0)
+		checkEglError("unbind AO")
+
+		// Unbind the framebuffer
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 
 	}
 
@@ -373,7 +423,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 
 		//Delete textures
-		val texts = intArrayOf(this.workingTexture, this.srcYTexture, this.srcUTexture, this.srcVTexture)
+		val texts = intArrayOf(this.workingTexture1, this.srcYTexture, this.srcUTexture, this.srcVTexture)
 		GLES30.glDeleteTextures(texts.size, texts, 0)
 
 		if (mEGLDisplay !== EGL14.EGL_NO_DISPLAY) {
