@@ -94,25 +94,23 @@ class FilteredPreviewController {
         'width': width,
         'height': height
       };
+
+      Stopwatch stopwatch  = Stopwatch()..start();
       await _channel.invokeMethod('update', params);
+      stopwatch.stop();
+
+      time += stopwatch.elapsedMilliseconds;
+      iterations = iterations + 1;
+
+      if (iterations == 100){
+          print('100 updates executed in average of ${time/iterations}, time: ${time}');
+          print('seconds = ${time/1000}, fps = ${iterations/(time/1000)}');
+      }
+
     } catch (e) {
       print('Error processing camera image: $e');
     }
   }
 
-  //TODO delete before delivery  - average 15 msec to update textures on each pass
-   //Profiling code
-    //Stopwatch stopwatch  = Stopwatch()..start(); 
-    //Uint8List formattedImage =ImageProcessor.getBytes(cameraImage);  
-    //stopwatch.stop();
-    //print('update executed  in  ${stopwatch.elapsedMilliseconds}');
-  // stopwatch.stop();
-  //
-  // time += stopwatch.elapsedMilliseconds;
-  // iterations = iterations + 1;
-  //
-  // if (iterations >= 1000){
-  // print('1000 updates executed in average of ${time/iterations}');
-  // }
     
 }
