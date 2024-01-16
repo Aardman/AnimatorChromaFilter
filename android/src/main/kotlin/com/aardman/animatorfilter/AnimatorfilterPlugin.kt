@@ -46,7 +46,46 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
         createFilter(call, result)
       }
 
-      //TODO implement update
+      //TODO implement enableFilters
+      "enableFilters" -> {
+        if(pluginBinding == null){
+          result.error("NOT_READY",  "pluginbinding is null", null)
+          return
+        }
+
+        //Create with width and height parameters from the call
+        //enableFilters(call, result)
+      }
+
+      //TODO implement disableFilters
+      "disableFilters" -> {
+        if(pluginBinding == null){
+          result.error("NOT_READY",  "pluginbinding is null", null)
+          return
+        }
+
+        //Create with width and height parameters from the call
+        //disableFilters(call, result)
+      }
+
+      /* call passes
+       data = {
+        "isInitialising": true,
+        "backgroundPath": fullPath,
+        "colour": [0.0, 255.0, 0.0],
+        "sensitivity": 0.45,
+       } */
+      //TODO implement updateFilters
+      "updateFilters" -> {
+        if(pluginBinding == null){
+          result.error("NOT_READY",  "pluginbinding is null", null)
+          return
+        }
+
+        //Create with width and height parameters from the call
+        //updateFilters(call, result)
+      }
+
       "update" -> {
         if (filterPipeline != null) {
           
