@@ -113,6 +113,7 @@ object GLUtils {
 	}
 
 	// Sets up a vertex array for a given shader program and attribute name
+	//NB: helper functions should not change OpenGL state for clarity
     fun setupVertexArrayForProgram(programId: Int): Int {
 		val vao = IntArray(1)
 		GLES30.glGenVertexArrays(1, vao, 0)

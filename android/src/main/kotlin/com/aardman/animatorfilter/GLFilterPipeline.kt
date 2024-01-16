@@ -121,6 +121,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		setupTestQuadShader()
 	}
 
+	//VBO is reused for each processing step
 	private fun setupCoordsVBO() {
 		// Other buffer setup code remains the same...
 		val texCoordsBuffer = ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
@@ -148,12 +149,11 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		checkEglError("generate vertex arrays")
 		GLES30.glBindVertexArray(testQuadVAO)
 
-		//Enable related attributes (might be in a more generic location, but this sequence is required
+		//Enable related attributes, link with currently bound VAO
 		GLES30.glEnableVertexAttribArray(this.attributes["a_texCoord"]!!)
 		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
 		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
 	}
-
 
 	//The main function executed on each image
 	fun render(yBytes: ByteArray, uBytes:ByteArray, vBytes: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
