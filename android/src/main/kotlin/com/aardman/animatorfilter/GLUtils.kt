@@ -86,9 +86,10 @@ object GLUtils {
 		if (error != EGL14.EGL_SUCCESS) {
 			throw RuntimeException(msg + ": EGL error: 0x" + Integer.toHexString(error))
 		}
-		else {
-			print(msg + "\n")
-		}
+		//debug all openGL calls
+//		else {
+//			print(msg + "\n")
+//		}
 	}
 
 	private fun buildShader(type: Int, shaderSource: String): Int {

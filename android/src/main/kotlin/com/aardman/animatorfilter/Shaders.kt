@@ -109,3 +109,28 @@ public var DebugFragmentShader = """#version 300 es
             outColor = vec4(1f, 0f, 0f, 1.0);
 		}
 	"""
+
+
+public val BaseVertexShader = """#version 300 es
+     in vec2 a_texCoord; // Assuming you are using this attribute for vertex positions
+
+     void main() {
+         // Convert from 0->1 to -1->+1 (clipspace)
+         vec2 clipSpace = a_texCoord * 2.0 - 1.0;
+
+         // Set the position
+         gl_Position = vec4(clipSpace, 0.0, 1.0);
+     }
+"""
+
+
+//Just outputs red for every pixel
+public var RedFragmentShader = """#version 300 es
+		precision mediump float;
+		  
+		out vec4 outColor;
+		
+		void main() {  
+            outColor = vec4(1f, 0f, 0f, 1.0);
+		}
+	"""
