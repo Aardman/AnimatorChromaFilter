@@ -433,6 +433,12 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glBindVertexArray(testQuadVAO)
 		checkEglError("bind vertex array")
 
+		//Enable related attributes, link with currently bound VAO
+		GLES30.glEnableVertexAttribArray(this.attributes["a_texCoord"]!!)
+
+		//Bind the VBO
+		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texVBO)
+
 		// Draw the solid debug quad to the screen
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
 
