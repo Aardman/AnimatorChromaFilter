@@ -83,6 +83,33 @@
 			return texture[0]
 		}
 
+		fun createTextureFromBitmap(data: Bitmap?, width: Int, height: Int, internalFormat: Int = GLES30.GL_RGBA, format: Int = GLES30.GL_RGBA, type: Int = GLES30.GL_UNSIGNED_BYTE): Int {
+			val texture = IntArray(1)
+			GLES30.glGenTextures(1, texture, 0)
+			GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texture[0])
+
+			GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+			GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+			GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST)
+			GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST)
+
+			// Upload the image into the texture.
+			val mipLevel = 0 // the largest mip
+			val border = 0
+
+			if (data != null) {
+				val buffer = ByteBuffer.allocate(data.byteCount)
+				data.copyPixelsToBuffer(buffer)
+				buffer.position(0)
+				GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, mipLevel, internalFormat, width, height, border, format, type, buffer)
+			} else {
+				GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, mipLevel, internalFormat, width, height, border, format, type, null)
+				GLES30.glGetError()
+			}
+
+			return texture[0]
+		}
+
 		fun checkEglError(msg: String) {
 			val error = EGL14.eglGetError()
 			if (error != EGL14.EGL_SUCCESS) {
