@@ -1,12 +1,11 @@
-import 'dart:async';
-import 'dart:ffi';
-import 'dart:ui';
+import 'dart:async';  
 import 'dart:developer';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:animatorfilter/filtered_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:animatorfilter/filtered_preview_controller.dart';
+import 'package:image/image.dart' as img;
 
 
 class PreviewPage  extends StatefulWidget  {
@@ -50,7 +49,61 @@ class _PreviewPageState  extends State<PreviewPage> {
     _textureWidth  = _camController!.value.previewSize!.width;
     await initPreviewController(_textureWidth, _textureHeight);
     await startImageStream();
-   } 
+
+    ///TODO: Static image setup for demo
+     await setImages();
+   }
+
+  //Demo image setup
+  Future<void> setImages() async {
+    try {
+
+      //Load images from files
+      var background = await loadImage("assets/backgrounds/bkgd_01.jpg");
+      if (background !=  null) { 
+        var croppedBackground  = await resizeAndCropImage(background, 1280, 720);
+
+        if (croppedBackground != null) {
+          await _controller?.setBackgroundImage(croppedBackground);
+        }
+      }
+
+    } catch (e) {
+      log("Error initializing camera, error: ${e.toString()}");
+    }
+  }
+
+  //Image handling
+  Future<img.Image?> loadImage(String path) async {
+    final file = File(path);
+    final bytes = await file.readAsBytes();
+    return img.decodeImage(bytes);
+  }
+
+  Future<img.Image?> resizeAndCropImage(img.Image originalImage, int w, int h) async {
+
+    if (originalImage == null) {
+      return null;
+    }
+
+    // Calculate new width based on the aspect ratio
+    int newWidth = (originalImage.width / originalImage.height > 2) ? (2 * h) : originalImage.width;
+
+    // Resize the image so that the short dimension is h pixels
+    final resizedImage = img.copyResize(originalImage, height: h, width: newWidth);
+
+    // Calculate the crop starting point (x-axis)
+    int cropStartX = (resizedImage.width - w) ~/ 2;
+
+    // Ensure the cropping parameters are within the image bounds
+    cropStartX = cropStartX < 0 ? 0 : cropStartX;
+    int cropWidth = cropStartX + w > resizedImage.width ? resizedImage.width - cropStartX : w;
+
+    // Crop the image
+    return img.copyCrop(resizedImage, x: cropStartX, y:0, width:cropWidth, height:h);
+  }
+
+
 
 //This version initialises the camera and starts the image stream 
    Future<void> initCamera() async {

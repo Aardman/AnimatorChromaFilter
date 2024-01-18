@@ -1,5 +1,6 @@
 package com.aardman.animatorfilter
 
+import android.graphics.Bitmap
 import android.view.Surface
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -8,6 +9,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.view.TextureRegistry
+import java.nio.ByteBuffer
 
 /** AnimatorfilterPlugin */
 class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
@@ -44,6 +46,24 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
 
         //Create with width and height parameters from the call
         createFilter(call, result)
+      }
+
+      "setBackground" -> {
+        if(pluginBinding == null){
+          result.error("NOT_READY",  "pluginbinding is null", null)
+          return
+        }
+
+        val backgroundImg = call.argument("image") as? ByteArray
+        val width = call.argument<Int>("width")
+        val height = call.argument<Int>("height")
+
+          if (backgroundImg != null &&width != null && height != null) {
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(backgroundImg))
+            // Extract bitmap from the call
+            filterPipeline?.setBackgroundImage(bitmap)
+          }
       }
 
       //TODO implement enableFilters

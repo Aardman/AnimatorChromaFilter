@@ -1,5 +1,9 @@
-import 'package:flutter/services.dart'; 
+import 'dart:io';
+import 'dart:ui';
+
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
+import 'package:image/image.dart';
 import 'Image_processor.dart';
 import 'package:image/image.dart' as img;
 
@@ -64,7 +68,28 @@ class FilteredPreviewController {
     _isDisposed = true;
   }
 
+
 //API
+
+  Future<void> setBackgroundImage(img.Image backgroundImage) async {
+    if (!_initialized) {
+      throw Exception('FilterController not initialized');
+    }
+
+    try {
+
+      ByteData? bytes = null;
+      Uint8List? imageBytes  = bytes?.buffer.asUint8List(0);
+
+      if (imageBytes !=  null) {
+        final params = {'img': imageBytes, 'width': 1280, 'height': 720};
+        await _channel.invokeMethod('setBackground', params);
+      }
+
+    } catch (e) {
+      print('Error processing camera image: $e');
+    }
+  }
 
   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
