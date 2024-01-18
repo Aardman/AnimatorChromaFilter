@@ -20,10 +20,6 @@ class GLFilter(private val outSurface: Surface, private val textureWidth: Int, p
     private var mEGLContext = EGL14.EGL_NO_CONTEXT
     private var mEGLSurface = EGL14.EGL_NO_SURFACE
 
-    //Test Quad - doesn't work on all android variants
-    private var testQuadProgram: Int = -1
-    private var testQuadvao: IntArray = IntArray(1)
-
     //Filter
     private var filterProgram: Int = -1
     private var filterProgramVAO: IntArray = IntArray(1)
