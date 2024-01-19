@@ -87,4 +87,33 @@ object ImageProcessing {
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
         return bitmap
     }
+
+    /**
+     * Creates a YUV420 semi-planar (yuv420sp) array from separate Y, U, and V planes.
+     * This method combines the Y plane as is and interleaves the U and V planes.
+     *
+     * @param yPlane The Y plane data as an unsigned byte array.
+     * @param uPlane The U plane data as an unsigned byte array.
+     * @param vPlane The V plane data as an unsigned byte array.
+     * @param width The width of the image.
+     * @param height The height of the image.
+     * @return A yuv420sp array combining the Y, U, and V planes.
+     */
+    fun createYUV420SP(yPlane: ByteArray, uPlane: ByteArray, vPlane: ByteArray, width: Int, height: Int): ByteArray {
+        val yuv420sp = ByteArray(width * height * 3 / 2)
+        val ySize = width * height
+        val uvSize = ySize / 4
+
+        // Copy Y plane
+        System.arraycopy(yPlane, 0, yuv420sp, 0, ySize)
+
+        // Interleave U and V planes
+        for (i in 0 until uvSize) {
+            yuv420sp[ySize + 2 * i] = uPlane[i]
+            yuv420sp[ySize + 2 * i + 1] = vPlane[i]
+        }
+
+        return yuv420sp
+    }
+
 }
