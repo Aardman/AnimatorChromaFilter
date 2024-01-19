@@ -113,14 +113,6 @@ class GLFilter(private val outSurface: Surface, private val textureWidth: Int, p
         GLUtils.checkEglError("eglCreateWindowSurface")
     }
 
-    private fun loadImageAndConvertToRGBABitmap(filePath: String): Bitmap? {
-        return try {
-            BitmapFactory.decodeFile(filePath)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
 
     private fun setupOpenGLObjects() {
         createTextures()
@@ -128,7 +120,6 @@ class GLFilter(private val outSurface: Surface, private val textureWidth: Int, p
     }
 
     private fun createTextures() {
-        backgroundTexture = GLUtils.createTextureFromBitmap(backgroundImg, width, height)
     }
 
     private fun setupUpGaussianFilterProgram() {
@@ -205,12 +196,13 @@ class GLFilter(private val outSurface: Surface, private val textureWidth: Int, p
         }
         else {
             backgroundImg = bitmap
+            backgroundTexture = GLUtils.createTextureFromBitmap(backgroundImg, width, height)
+            draw(1f, true)
         }
     }
 
-    //The main function executed on each image
+    //The main function executed on each camera frame
     public fun render(yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray, width: Int, height: Int, radius: Float, flip: Boolean = false) {
-        makeCurrent()
         draw(1f, true)
     }
 

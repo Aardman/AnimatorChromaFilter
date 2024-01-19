@@ -102,6 +102,7 @@
 				data.copyPixelsToBuffer(buffer)
 				buffer.position(0)
 				GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, mipLevel, internalFormat, width, height, border, format, type, buffer)
+				checkEglError("uploading bitmap to new texture")
 			} else {
 				GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, mipLevel, internalFormat, width, height, border, format, type, null)
 				GLES30.glGetError()
