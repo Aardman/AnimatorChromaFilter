@@ -61,6 +61,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
 
           if (backgroundImg != null &&width != null && height != null) {
             //TODO: replace with filepath and processing in Java
+            //using existing code from before
 //            val bitmap =  createBitmapWithAlpha(backgroundImg, width, height)
 //            bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(backgroundImg))
 //            // Extract bitmap from the call
