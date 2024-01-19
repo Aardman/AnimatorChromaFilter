@@ -1,6 +1,7 @@
 package com.aardman.animatorfilter
 
 import android.graphics.Bitmap
+import android.graphics.Bitmap.createBitmap
 import android.view.Surface
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -54,15 +55,16 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
           return
         }
 
-        val backgroundImg = call.argument("image") as? ByteArray
+        val backgroundImg = call.argument("img") as? ByteArray
         val width = call.argument<Int>("width")
         val height = call.argument<Int>("height")
 
           if (backgroundImg != null &&width != null && height != null) {
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(backgroundImg))
-            // Extract bitmap from the call
-            filterPipeline?.setBackgroundImage(bitmap)
+            //TODO: replace with filepath and processing in Java
+//            val bitmap =  createBitmapWithAlpha(backgroundImg, width, height)
+//            bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(backgroundImg))
+//            // Extract bitmap from the call
+//            filterPipeline?.setBackgroundImage(bitmap)
           }
       }
 

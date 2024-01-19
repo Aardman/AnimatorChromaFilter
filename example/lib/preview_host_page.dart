@@ -7,6 +7,20 @@ import 'package:flutter/material.dart';
 import 'package:animatorfilter/filtered_preview_controller.dart';
 import 'package:image/image.dart' as img;
 
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import 'dart:isolate';
+import 'package:flutter/foundation.dart';
+import 'package:tuple/tuple.dart';
+
+// This function is a top-level function and should remain outside of any class.
+img.Image decodeImageFn(Uint8List bytes) {
+  return img.decodeImage(bytes)!;
+}
+
+img.Image copyResizeFn(Tuple3<img.Image, int, int> params) {
+  return img.copyResize(params.item1, height: params.item2, width: params.item3);
+}
 
 class PreviewPage  extends StatefulWidget  {
   const PreviewPage({Key? key}) : super(key: key);
@@ -59,7 +73,9 @@ class _PreviewPageState  extends State<PreviewPage> {
     try {
 
       //Load images from files
-      var background = await loadImage("assets/backgrounds/bkgd_01.jpg");
+      //var backgroundAsset = await AssetImage("assets/backgrounds/bkgd_01.jpg");
+      img.Image? background = await assetImageToImage("assets/backgrounds/bkgd_01.jpg");
+
       if (background !=  null) { 
         var croppedBackground  = await resizeAndCropImage(background, 1280, 720);
 
@@ -73,12 +89,20 @@ class _PreviewPageState  extends State<PreviewPage> {
     }
   }
 
-  //Image handling
-  Future<img.Image?> loadImage(String path) async {
-    final file = File(path);
-    final bytes = await file.readAsBytes();
-    return img.decodeImage(bytes);
+  //Load using rootBundle
+  Future<img.Image> assetImageToImage(String assetPath) async {
+    final ByteData data = await rootBundle.load(assetPath);
+    final Uint8List bytes = data.buffer.asUint8List();
+
+    return await compute(decodeImageFn, bytes);
   }
+
+  //loading this  way was unsuccessful
+  // Future<img.Image?> loadImage(String path) async {
+  //   final file = File(path);
+  //   final bytes = await file.readAsBytes();
+  //   return img.decodeImage(bytes);
+  // }
 
   Future<img.Image?> resizeAndCropImage(img.Image originalImage, int w, int h) async {
 
@@ -90,7 +114,10 @@ class _PreviewPageState  extends State<PreviewPage> {
     int newWidth = (originalImage.width / originalImage.height > 2) ? (2 * h) : originalImage.width;
 
     // Resize the image so that the short dimension is h pixels
-    final resizedImage = img.copyResize(originalImage, height: h, width: newWidth);
+    final resizedImage = await compute(copyResizeFn, Tuple3(originalImage, h, newWidth));
+
+    //img.copyResize(originalImage, height: h, width: newWidth);
+
 
     // Calculate the crop starting point (x-axis)
     int cropStartX = (resizedImage.width - w) ~/ 2;
