@@ -71,37 +71,17 @@ class FilteredPreviewController {
 
 //API
 
-  Future<void> setBackgroundImage(img.Image backgroundImage) async {
+  Future<void> setBackgroundImagePath(String backgroundImagePath) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
     }
 
     try {
-
-      ByteData? bytes =  await imageToByteData(backgroundImage);
-      Uint8List? imageBytes  = bytes?.buffer.asUint8List(0);
-
-      if (imageBytes !=  null) {
-        final params = {'img': imageBytes, 'width': 1280, 'height': 720};
-        await _channel.invokeMethod('setBackground', params);
-      }
-
+        final params = {'img': backgroundImagePath, 'width': 1280, 'height': 720};
+        await _channel.invokeMethod('setBackgroundImagePath', params);
     } catch (e) {
       print('Error processing camera image: $e');
     }
-  }
-
-  Future<ByteData> imageToByteData(img.Image image, {String format = 'png'}) async {
-    Uint8List encodedBytes;
-    if (format == 'png') {
-      encodedBytes = img.encodePng(image);
-    } else if (format == 'jpg' || format == 'jpeg') {
-      encodedBytes = img.encodeJpg(image);
-    } else {
-      throw ArgumentError('Unsupported format: $format');
-    }
-
-    return encodedBytes.buffer.asByteData();
   }
 
 

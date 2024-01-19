@@ -11,16 +11,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
-import 'package:tuple/tuple.dart';
-
-// This function is a top-level function and should remain outside of any class.
-img.Image decodeImageFn(Uint8List bytes) {
-  return img.decodeImage(bytes)!;
-}
-
-img.Image copyResizeFn(Tuple3<img.Image, int, int> params) {
-  return img.copyResize(params.item1, height: params.item2, width: params.item3);
-}
+import 'package:path_provider/path_provider.dart';
 
 class PreviewPage  extends StatefulWidget  {
   const PreviewPage({Key? key}) : super(key: key);
@@ -71,66 +62,41 @@ class _PreviewPageState  extends State<PreviewPage> {
   //Demo image setup
   Future<void> setImages() async {
     try {
-
-      //Load images from files
-      //var backgroundAsset = await AssetImage("assets/backgrounds/bkgd_01.jpg");
-      img.Image? background = await assetImageToImage("assets/backgrounds/bkgd_01.jpg");
-
-      if (background !=  null) { 
-        var croppedBackground  = await resizeAndCropImage(background, 1280, 720);
-
-        if (croppedBackground != null) {
-          await _controller?.setBackgroundImage(croppedBackground);
-        }
+      File backgroundFile = await getImageFileFromAssets("assets/backgrounds/bkgd_01.jpg");
+      String? fullPath = backgroundFile.path;
+      if (fullPath != null) {
+        await _controller?.setBackgroundImagePath(fullPath);
       }
-
     } catch (e) {
-      log("Error initializing camera, error: ${e.toString()}");
+      log("Error setting background image, error: ${e.toString()}");
     }
   }
 
-  //Load using rootBundle
-  Future<img.Image> assetImageToImage(String assetPath) async {
-    final ByteData data = await rootBundle.load(assetPath);
-    final Uint8List bytes = data.buffer.asUint8List();
-
-    return await compute(decodeImageFn, bytes);
+  Future<File> getImageFileFromAssets(String path) async {
+    final byteData = await rootBundle.load('$path');
+    final buffer = byteData.buffer;
+    Directory tempDir = await getTemporaryDirectory();
+    String tempPath = tempDir.path;
+    var filePath = tempPath + '/tempfile.jpg';
+    return File(filePath).writeAsBytes(buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
   }
 
-  //loading this  way was unsuccessful
-  // Future<img.Image?> loadImage(String path) async {
-  //   final file = File(path);
-  //   final bytes = await file.readAsBytes();
-  //   return img.decodeImage(bytes);
-  // }
+  Future<void> setFilterParameters() async {
 
-  Future<img.Image?> resizeAndCropImage(img.Image originalImage, int w, int h) async {
+    // var colours = sampleToggle ? [0.0, 255.0, 0.0] : [0.0, 0.0, 255.0];
+    //
+    // var sensitivity = _backgroundSensitivity;
+    // // sensitivity = 0.7;
+    // print("_backgroundSensitivity " + sensitivity.toString());
+    //
+    // var data = {
+    //   "backgroundPath": fullPath,
+    //   "colour": colours,
+    //   "sensitivity": sensitivity,
+    // };
 
-    if (originalImage == null) {
-      return null;
-    }
-
-    // Calculate new width based on the aspect ratio
-    int newWidth = (originalImage.width / originalImage.height > 2) ? (2 * h) : originalImage.width;
-
-    // Resize the image so that the short dimension is h pixels
-    final resizedImage = await compute(copyResizeFn, Tuple3(originalImage, h, newWidth));
-
-    //img.copyResize(originalImage, height: h, width: newWidth);
-
-
-    // Calculate the crop starting point (x-axis)
-    int cropStartX = (resizedImage.width - w) ~/ 2;
-
-    // Ensure the cropping parameters are within the image bounds
-    cropStartX = cropStartX < 0 ? 0 : cropStartX;
-    int cropWidth = cropStartX + w > resizedImage.width ? resizedImage.width - cropStartX : w;
-
-    // Crop the image
-    return img.copyCrop(resizedImage, x: cropStartX, y:0, width:cropWidth, height:h);
+    // await _controller?.updateFilters(data);
   }
-
-
 
 //This version initialises the camera and starts the image stream 
    Future<void> initCamera() async {

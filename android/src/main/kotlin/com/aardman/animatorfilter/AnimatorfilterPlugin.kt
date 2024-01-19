@@ -49,18 +49,21 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
         createFilter(call, result)
       }
 
-      "setBackground" -> {
+      "setBackgroundImagePath" -> {
         if(pluginBinding == null){
           result.error("NOT_READY",  "pluginbinding is null", null)
           return
         }
 
-        val backgroundImg = call.argument("img") as? ByteArray
+        val backgroundImg = call.argument("img") as? String
         val width = call.argument<Int>("width")
         val height = call.argument<Int>("height")
 
           if (backgroundImg != null &&width != null && height != null) {
             //TODO: replace with filepath and processing in Java
+
+
+
             //using existing code from before
 //            val bitmap =  createBitmapWithAlpha(backgroundImg, width, height)
 //            bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(backgroundImg))
