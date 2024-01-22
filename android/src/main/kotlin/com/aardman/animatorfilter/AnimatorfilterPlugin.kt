@@ -23,7 +23,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
   private var flutterSurfaceTexture: TextureRegistry.SurfaceTextureEntry? =  null
 
   private var pluginBinding: FlutterPlugin.FlutterPluginBinding? = null
-  private var filterPipeline: GLFilter? = null
+  private var filterPipeline: GLFilterPipeline? = null
 
   private var imageWidth: Int  = 0
   private var imageHeight: Int = 0
@@ -176,7 +176,7 @@ private fun createFilter(call: MethodCall,  result: Result) {
 
  // create our filter ready to the surface we just created (which is backed
  // by the flutter texture
- filterPipeline = GLFilter(nativeSurface, width, height);
+ filterPipeline = GLFilterPipeline(nativeSurface, width, height);
 
  reply["textureId"] = flutterSurfaceTexture?.id() ?: -1
  result.success(reply)

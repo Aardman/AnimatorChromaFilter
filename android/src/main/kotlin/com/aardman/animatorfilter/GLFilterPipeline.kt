@@ -29,6 +29,10 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private var srcVTexture:Int = -1
 	private var yuvConversionVAO = -1
 
+	//Temporary sample images
+	private var backgroundImg: Bitmap? = null
+	private var cameraImg: Bitmap? = null
+
 	//Filter
 	private var filterProgram: Int = -1
 	private var filterVAO = -1
@@ -278,46 +282,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	}
 
-	//The main function executed on each image
-	fun render(yBytes: ByteArray, uBytes:ByteArray, vBytes: ByteArray, width:Int, height:Int, radius: Float, flip: Boolean = false) {
-		makeCurrent()
-
-		displayTestQuad()
-
-		// *** A ****
-		//Load Y U V data into existing textures to use in image conversion
-	    //GLUtils.updateTextures(yBytes,srcYTexture, uBytes, srcUTexture, vBytes, srcVTexture, width, height)
-
-//		var resultY = getBitmapFromTexture(srcYTexture, textureWidth, textureHeight)
-//		var resultU = getBitmapFromTexture(srcUTexture, textureWidth / 2, textureHeight /  2)
-//		var resultV = getBitmapFromTexture(srcVTexture, textureWidth / 2, textureHeight /  2)
-
-		// *** B ****
-//		convertYUV(width, height)
-//		GLUtils.checkEglError("convertYUV")
-		//The texture workingTexture now contains the results of the conversion
-
-		// *** C ****
-		//applyFilters()
-
-		// *** E ****
-
-		//TODO Delete test code
-		//Fill the working texture with solid red for a test rendering
-		//populateTestTexture()
-		//var resultTest = getBitmapFromFBO(textureWidth, textureHeight, workingFBO1)
-		//print("")
-
-		//Draw the filterSrcTexture to the screen
-		//displayOutputTexture()
-
-		//D: Output the changed texture to a file on a background thread
-		//saveTextureToFile()
-
-
-	}
-
-
 	//Converts the srcYUV textures to RGB and stores in workingTexture
 	private fun convertYUV(width: Int, height: Int) {
 
@@ -419,7 +383,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	}
 
 	//Display test quad used to validate the pipeline
-	private fun displayTestQuad() {
+	private fun drawTestQuad() {
 		// Disable depth testing for 2D rendering
 		GLES30.glDisable(GLES30.GL_DEPTH_TEST)
 
@@ -448,6 +412,95 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		// Swap buffers to display the result
 		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
 		GLUtils.checkEglError("eglSwapBuffers")
+	}
+
+	//Draw Methods for different examples
+
+	fun drawWithFilter(radius: Float, flip: Boolean = false) {
+		makeCurrent()
+
+		// Tell it to use our program
+		GLES30.glUseProgram(this.filterProgram)
+
+		// set u_radius in fragment shader
+		GLES30.glUniform1f(this.uniforms["u_radius"]!!, radius)
+
+		GLES30.glUniform1f(this.uniforms["u_flipY"]!!, if (flip) -1f else 1f) // need to y flip for canvas
+
+		// Tell the shader to get the texture from texture unit 0
+		GLES30.glUniform1i(this.uniforms["u_image"]!!, 0)
+		GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + 0)
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, backgroundTexture)
+
+		// Unbind any output frame buffer that may be have bounded by other OpenGL programs (so we render to the default display)
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+
+		GLES30.glViewport(0, 0, textureWidth, textureHeight)
+		GLES30.glClearColor(0f, 0f, 0f, 0f)
+		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
+
+		// Draw the rectangles we put in the vertex shader
+		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
+
+		// This "draw" the result onto the surface we got from Flutter
+		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
+		GLUtils.checkEglError("eglSwapBuffers")
+	}
+
+
+	//API
+
+	//Load background image
+	//TODO: remove this double init when rendering from the camera as this is just for a static test
+	public fun setBackgroundImage(bitmap: Bitmap) {
+		if (backgroundImg != null)  {
+			cameraImg =  bitmap
+		}
+		else {
+			backgroundImg = bitmap
+			backgroundTexture = GLUtils.createTextureFromBitmap(backgroundImg, textureWidth, textureHeight)
+			//drawWithFilter(1f, true) //trigger initial draw when background is changed
+		}
+	}
+
+	//The main function executed on each camera frame
+	public fun render(yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray, width: Int, height: Int, radius: Float, flip: Boolean = false) {
+
+		makeCurrent()
+
+		drawTestQuad()
+	    //drawWithFilter(1f, true)
+
+		// *** A ****
+		//Load Y U V data into existing textures to use in image conversion
+		//GLUtils.updateTextures(yBytes,srcYTexture, uBytes, srcUTexture, vBytes, srcVTexture, width, height)
+
+		//		var resultY = getBitmapFromTexture(srcYTexture, textureWidth, textureHeight)
+		//		var resultU = getBitmapFromTexture(srcUTexture, textureWidth / 2, textureHeight /  2)
+		//		var resultV = getBitmapFromTexture(srcVTexture, textureWidth / 2, textureHeight /  2)
+
+		// *** B ****
+		//		convertYUV(width, height)
+		//		GLUtils.checkEglError("convertYUV")
+		//The texture workingTexture now contains the results of the conversion
+
+		// *** C ****
+		//applyFilters()
+
+		// *** E ****
+
+		//TODO Delete test code
+		//Fill the working texture with solid red for a test rendering
+		//populateTestTexture()
+		//var resultTest = getBitmapFromFBO(textureWidth, textureHeight, workingFBO1)
+		//print("")
+
+		//Draw the filterSrcTexture to the screen
+		//displayOutputTexture()
+
+		//D: Output the changed texture to a file on a background thread
+		//saveTextureToFile()
+
 	}
 
 

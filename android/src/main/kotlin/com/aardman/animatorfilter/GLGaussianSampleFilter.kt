@@ -1,8 +1,6 @@
 package com.aardman.animatorfilter
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.media.Image
 import android.opengl.EGL14
 import android.opengl.EGLConfig
 import android.opengl.EGLExt
@@ -13,7 +11,7 @@ import com.aardman.animatorfilter.GLUtils.createProgram
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class GLFilter(private val outSurface: Surface, private val textureWidth: Int, private val textureHeight: Int) {
+class GLGaussianSampleFilter(private val outSurface: Surface, private val textureWidth: Int, private val textureHeight: Int) {
 
     //EGL
     private var mEGLDisplay = EGL14.EGL_NO_DISPLAY
@@ -203,14 +201,7 @@ class GLFilter(private val outSurface: Surface, private val textureWidth: Int, p
 
     //The main function executed on each camera frame
     public fun render(yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray, width: Int, height: Int, radius: Float, flip: Boolean = false) {
-
-        //convert the YUV planar bytes to a suitable array
-        //40ms overhead without a buffering processing queue on main thread
-//        val yuv420sp = ImageProcessing.createYUV420SP(yBytes, uBytes, vBytes, width, height)
-//        val rgbOut = IntArray(width * height)
-//        AnimatorNativeLibrary.YUVtoARBG(yuv420sp, width, height, rgbOut)
-
-        draw(1f, true)
+         draw(1f, true)
     }
 
     //EGL Lifecycle
