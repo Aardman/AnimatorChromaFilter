@@ -5,7 +5,7 @@
 
 
 JNIEXPORT void JNICALL
-Java_com.aardman.animatorfilter_AnimatorNativeLibrary_YUVtoRBGA(JNIEnv *env, jobject obj,
+Java_com_aardman_animatorfilter_AnimatorNativeLibrary_YUVtoRBGA(JNIEnv *env, jobject obj,
                                                                        jbyteArray yuv420sp,
                                                                        jint width, jint height,
                                                                        jintArray rgbOut) {
@@ -64,7 +64,7 @@ Java_com.aardman.animatorfilter_AnimatorNativeLibrary_YUVtoRBGA(JNIEnv *env, job
 }
 
 JNIEXPORT void JNICALL
-Java_com.aardman.animatorfilter_AnimatorNativeLibrary_YUVtoARBG(JNIEnv *env, jobject obj,
+Java_com_aardman_animatorfilter_AnimatorNativeLibrary_YUVtoARBG(JNIEnv *env, jobject obj,
                                                                        jbyteArray yuv420sp,
                                                                        jint width, jint height,
                                                                        jintArray rgbOut) {
@@ -124,7 +124,7 @@ Java_com.aardman.animatorfilter_AnimatorNativeLibrary_YUVtoARBG(JNIEnv *env, job
 
 
 JNIEXPORT void JNICALL
-Java_com.aardman.animatorfilter_AnimatorNativeLibrary_adjustBitmap(JNIEnv *jenv, jclass thiz,
+Java_com_aardman_animatorfilter_AnimatorNativeLibrary_adjustBitmap(JNIEnv *jenv, jclass thiz,
                                                                        jobject src) {
     unsigned char *srcByteBuffer;
     int result = 0;

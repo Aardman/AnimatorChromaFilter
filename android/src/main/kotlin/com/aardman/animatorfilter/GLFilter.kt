@@ -203,6 +203,13 @@ class GLFilter(private val outSurface: Surface, private val textureWidth: Int, p
 
     //The main function executed on each camera frame
     public fun render(yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray, width: Int, height: Int, radius: Float, flip: Boolean = false) {
+
+        //convert the YUV planar bytes to a suitable array
+        //40ms overhead without a buffering processing queue on main thread
+//        val yuv420sp = ImageProcessing.createYUV420SP(yBytes, uBytes, vBytes, width, height)
+//        val rgbOut = IntArray(width * height)
+//        AnimatorNativeLibrary.YUVtoARBG(yuv420sp, width, height, rgbOut)
+
         draw(1f, true)
     }
 

@@ -47,6 +47,11 @@ android {
 
     defaultConfig {
         minSdkVersion 21
+        externalNativeBuild {
+            cmake {
+                cppFlags ''
+            }
+        }
     }
 
     dependencies {
@@ -63,6 +68,12 @@ android {
                outputs.upToDateWhen {false}
                showStandardStreams = true
             }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.22.1'
         }
     }
 }
