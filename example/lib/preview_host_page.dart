@@ -5,11 +5,8 @@ import 'package:camera/camera.dart';
 import 'package:animatorfilter/filtered_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:animatorfilter/filtered_preview_controller.dart';
-import 'package:image/image.dart' as img;
 
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
-import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -22,47 +19,49 @@ class PreviewPage  extends StatefulWidget  {
 }
 
 class _PreviewPageState  extends State<PreviewPage> {
-  
+
   CameraController? _camController;
   int _camFrameRotation = 0;
   double _camFrameToScreenScale = 0;
   int _lastRun = 0;
 
-  double _radius = 0 ;
-  FilteredPreviewController?  _controller;
+  double _radius = 0;
+
+  FilteredPreviewController? _controller;
 
   //Desired Preview Size 
   //TODO (2)
-  double _textureWidth  = -1;
+  double _textureWidth = -1;
   double _textureHeight = -1;
 
-   @override
-   void initState(){
+  @override
+  void initState() {
     super.initState();
     init();
-   }
+  }
 
-   @override
-   dispose() async {
+  @override
+  dispose() async {
     super.dispose();
     await _controller?.dispose();
-   }
- 
-   init() async {   
-    await initCamera(); 
+  }
+
+  init() async {
+    await initCamera();
     _textureHeight = _camController!.value.previewSize!.height;
-    _textureWidth  = _camController!.value.previewSize!.width;
+    _textureWidth = _camController!.value.previewSize!.width;
     await initPreviewController(_textureWidth, _textureHeight);
     await startImageStream();
 
     ///TODO: Static image setup for demo
-     await setImages();
-   }
+    await setImages();
+  }
 
   //Demo image setup
   Future<void> setImages() async {
     try {
-      File backgroundFile = await getImageFileFromAssets("assets/backgrounds/bkgd_01.jpg");
+      File backgroundFile = await getImageFileFromAssets(
+          "assets/backgrounds/bkgd_01.jpg");
       String? fullPath = backgroundFile.path;
       if (fullPath != null) {
         await _controller?.setBackgroundImagePath(fullPath);
@@ -78,11 +77,11 @@ class _PreviewPageState  extends State<PreviewPage> {
     Directory tempDir = await getTemporaryDirectory();
     String tempPath = tempDir.path;
     var filePath = tempPath + '/tempfile.jpg';
-    return File(filePath).writeAsBytes(buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+    return File(filePath).writeAsBytes(
+        buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
   }
 
   Future<void> setFilterParameters() async {
-
     // var colours = sampleToggle ? [0.0, 255.0, 0.0] : [0.0, 0.0, 255.0];
     //
     // var sensitivity = _backgroundSensitivity;
@@ -99,9 +98,10 @@ class _PreviewPageState  extends State<PreviewPage> {
   }
 
 //This version initialises the camera and starts the image stream 
-   Future<void> initCamera() async {
+  Future<void> initCamera() async {
     final cameras = await availableCameras();
-    var idx = cameras.indexWhere((c) => c.lensDirection == CameraLensDirection.back);
+    var idx = cameras.indexWhere((c) =>
+    c.lensDirection == CameraLensDirection.back);
     if (idx < 0) {
       log("No Back camera found - error");
       return;
@@ -113,11 +113,13 @@ class _PreviewPageState  extends State<PreviewPage> {
       desc,
       ResolutionPreset.high, // 720p
       enableAudio: false,
-      imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.yuv420 : ImageFormatGroup.bgra8888,
+      imageFormatGroup: Platform.isAndroid
+          ? ImageFormatGroup.yuv420
+          : ImageFormatGroup.bgra8888,
     );
 
     try {
-      await _camController!.initialize(); 
+      await _camController!.initialize();
     } catch (e) {
       log("Error initializing camera, error: ${e.toString()}");
     }
@@ -127,97 +129,85 @@ class _PreviewPageState  extends State<PreviewPage> {
     }
   }
 
-   //This version initialises the camera and starts the image stream 
-   Future<void> startImageStream() async { 
-    try { 
-      await _camController!.startImageStream((image) => _processCameraImage(image));
+  //This version initialises the camera and starts the image stream
+  Future<void> startImageStream() async {
+    try {
+      await _camController!.startImageStream((image) =>
+          _processCameraImage(image));
     } catch (e) {
       log("Error initializing camera, error: ${e.toString()}");
-    } 
+    }
   }
 
 
- //Will be called on each image returned from the camera
- //Framerate 
- void _processCameraImage(CameraImage image) async {
-
+  //Will be called on each image returned from the camera
+  //Framerate
+  void _processCameraImage(CameraImage image) async {
     int Framerate = 60;
 
-    if ( !mounted ||  DateTime.now().millisecondsSinceEpoch - _lastRun < Framerate) {
+    if (!mounted || DateTime
+        .now()
+        .millisecondsSinceEpoch - _lastRun < Framerate) {
       return;
-    } 
- 
+    }
+
     await _controller?.update(image);
 
-  
-     _lastRun = DateTime.now().millisecondsSinceEpoch;
+
+    _lastRun = DateTime
+        .now()
+        .millisecondsSinceEpoch;
   }
 
-   initPreviewController(double width,  double height) async {
-
+  initPreviewController(double width, double height) async {
     //Init the controller
     _controller = FilteredPreviewController();
     await _controller!.initialize(width, height);
 
     //update ui
     setState(() {});
-
-   }
- 
-
- @override
-  Widget build(BuildContext context) {
-    if (_controller == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    return Material(
-      child: Container(
-        color: Colors.white,
-         child: Column(
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FilteredPreview(_controller!),
-                ],
-              ),
-            ),
-            Row(
-              children: [
-                const SizedBox(width: 20),
-                const Text(
-                  'Blur',
-                  style: TextStyle(color: Colors.black, fontSize: 20),
-                ),
-                Expanded(
-                  child: Slider(
-                    value: _radius,
-                    min: 0,
-                    max: 20,
-                    onChanged: (val) {
-                      setState(() {
-                        // Now we wait for an update from the camera stream
-                        // _radius = val;
-                        // _controller!.draw(_radius);
-                      });
-                    },
-                  ),
-                )
-              ],
-            )
-          ],
-        ),
-      ),
-    );
   }
 
 
-}
+  @override
+  Widget build(BuildContext context) {
 
+    var screenSize = MediaQuery.of(context).size;
+
+    // Calculate the size for the SizedBox while maintaining the aspect ratio
+    double aspectRatio = 1280 / 720;
+    double width = screenSize.width * 0.9; // 90% of screen width
+    double height = width / aspectRatio;
+
+    // Ensure the height doesn't exceed the screen height
+    if (height > screenSize.height) {
+      height = screenSize.height * 0.9; // 90% of screen height
+      width = height * aspectRatio;
+    }
+
+    if (_controller == null) {
+      // Display a progress indicator when _controller is null
+      return const Center(child: CircularProgressIndicator());
+    } else {
+
+      return Container(
+        width: screenSize.width,
+        height: screenSize.height,
+        color: Colors.green, // Replace with your desired color
+        child: Center(
+          child: _controller == null
+              ? const CircularProgressIndicator()
+              : SizedBox(
+            width: width,
+            height: height,
+            child: FilteredPreview(_controller!),
+          ),
+        ),
+      );
+    }
+  }
+
+}
 
  //This version sets a single value for the imageInfo from a file
   //  Future<void> initImageInfoFromFile() async {
