@@ -212,6 +212,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	//Setup the chroma filter
 	private fun setupFilter(){
+
 		this.filterProgram = setupShaderProgram(VertexShaderSource, chromaKeyFilter)
 
 		// Get vertex shader attributes
@@ -330,8 +331,8 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	//Applies the Chromakey filter to the input framebuffer
 	private fun applyFilter(){
 
-		// Bind the framebuffer where workingTexture is enabled
-		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO1)
+		// Bind the ouptut framebuffer bound to the output texture
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO2)
 
 		//Use conversion program and set parameters
 		GLES30.glUseProgram(this.filterProgram)
@@ -375,9 +376,9 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glUseProgram(displayProgram)
 		GLUtils.checkEglError("glUseProgram displayProgram")
 
-		// Bind workingTexture to a texture unit and set the corresponding uniform in the shader
+		// Bind workingTexture2 from FBO2 to a texture unit and set the corresponding uniform in the shader
 		GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture1)
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture2)
 		GLUtils.checkEglError("Bind FBO texture")
 		GLES30.glUniform1i(uniforms["workingTexture"]!!, 0)  // Assuming a uniform for the texture in the shader
 
@@ -475,6 +476,8 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	//Draw Methods for different examples
 
+	//TODO: delete after pipeline tested
+	//Gaussian example applied to background
 	fun drawWithFilter(radius: Float, flip: Boolean = false) {
 		makeCurrent()
 
@@ -506,7 +509,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLUtils.checkEglError("eglSwapBuffers")
 	}
 
-	//TODO: Main draw method
+	//Main draw method for chromakey processing
 	fun draw (yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray, width: Int, height: Int, radius: Float, flip: Boolean = false) {	// *** A ****
 
 		// *** A ****
@@ -538,7 +541,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		// *** E  ****
 		//D: Output the changed texture to a file on a background thread
 		saveTextureToFile()
-
 	}
 
 	//API
