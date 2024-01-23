@@ -71,14 +71,15 @@ class FilteredPreviewController {
 
 //API
 
+  //TODO Implement correct parameters passing ( colour, sensitivity, backgroundImagePath)
   Future<void> updateFilters( ) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
     }
 
     try {
-      final params = {'img': backgroundImagePath, 'width': 1280, 'height': 720};
-      await _channel.invokeMethod('setBackgroundImagePath', params);
+      final params = {};
+      await _channel.invokeMethod('updateFilters', params);
     } catch (e) {
       print('Error processing camera image: $e');
     }
