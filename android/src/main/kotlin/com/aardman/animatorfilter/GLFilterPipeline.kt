@@ -548,9 +548,9 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	//The main function executed on each camera frame
 	public fun render(yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray, width: Int, height: Int, radius: Float, flip: Boolean = false) {
      	makeCurrent()
-     	//draw(yBytes,uBytes,vBytes, width, height, radius, flip)
-		drawTestQuad()
-	    //drawWithFilter(1f, true)
+     	//draw(yBytes,uBytes,vBytes, width, height, radius, flip)  ///FINAL functionality
+	    //drawWithFilter(1f, true)  //Test coherence with simple gaussian sample
+		drawTestQuad()  //draw red quad on screen
 	}
 
 	public fun updateParameters(filterParameters: FilterParameters){
