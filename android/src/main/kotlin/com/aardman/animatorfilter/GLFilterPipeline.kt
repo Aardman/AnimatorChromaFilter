@@ -1,14 +1,12 @@
 package com.aardman.animatorfilter
 
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.opengl.EGL14
 import android.opengl.EGLConfig
 import android.opengl.EGLExt
 import android.opengl.GLES30
 import android.util.Size
 import android.view.Surface
-import com.aardman.animatorfilter.Constants.FLOAT_NOT_SET
 import com.aardman.animatorfilter.GLUtils.checkEglError
 import com.aardman.animatorfilter.GLUtils.getBitmapFromTexture
 import com.aardman.animatorfilter.GLUtils.setupFramebuffer
@@ -75,10 +73,9 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private var texVBO = -1
 
 	//Framebuffers
+	//Alternate for processing steps on textures
 	private var workingFBO1: Int = -1
-	//TODO: remove if no longer required
 	private var workingFBO2: Int = -1
-
 
 	init {
 		eglSetup()
