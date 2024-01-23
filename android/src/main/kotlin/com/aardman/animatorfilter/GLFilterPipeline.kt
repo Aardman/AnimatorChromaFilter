@@ -555,6 +555,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	}
 
 	public fun updateParameters(filterParameters: FilterParameters){
+		filterParameters.updateWith(filterParameters);
 		if (filterParameters.backgroundImage != null) {
 			val path = filterParameters.backgroundImage
 			//create the bitmap and texture
@@ -562,7 +563,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 			backgroundImg = bitmap
 			backgroundImageTexture = GLUtils.createTextureFromBitmap(backgroundImg, textureWidth, textureHeight)
 		}
-		filterParameters.updateWith(filterParameters);
 	}
 
 	//TODO: Used only for testing/development
