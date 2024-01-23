@@ -72,7 +72,7 @@ class FilteredPreviewController {
 //API
 
   //TODO Implement correct parameters passing ( colour, sensitivity, backgroundImagePath)
-  Future<void> updateFilters( ) async {
+  Future<void> updateFilters(Object params) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
     }
