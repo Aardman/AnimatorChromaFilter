@@ -65,12 +65,12 @@ public val chromaKeyFilter  = """#version 300 es
              uniform float smoothing;
              uniform vec3 colorToReplace;
              uniform sampler2D inputImageTexture;
-             uniform sampler2D inputImageTexture2;
+             uniform sampler2D backgroundImageTexture;
              
              void main()
              {
                  vec4 textureColor = texture2D(inputImageTexture, textureCoordinate);
-                 vec4 textureColor2 = texture2D(inputImageTexture2, textureCoordinate2);
+                 vec4 textureColor2 = texture2D(backgroundImageTexture, textureCoordinate2);
                  
                  float maskY = 0.2989 * colorToReplace.r + 0.5866 * colorToReplace.g + 0.1145 * colorToReplace.b;
                  float maskCr = 0.7132 * (colorToReplace.r - maskY);

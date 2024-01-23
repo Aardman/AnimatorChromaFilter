@@ -1,14 +1,13 @@
 package com.aardman.animatorfilter
 
+import android.util.Size
 import android.view.Surface
-
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.view.TextureRegistry
-import android.util.Size
 
 
 /** AnimatorfilterPlugin */
@@ -48,22 +47,6 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
         createFilter(call, result)
       }
 
-      "setBackgroundImagePath" -> {
-        if(pluginBinding == null){
-          result.error("NOT_READY",  "pluginbinding is null", null)
-          return
-        }
-
-        val backgroundImg = call.argument("img") as? String
-        val width = call.argument<Int>("width")
-        val height = call.argument<Int>("height")
-
-          if (backgroundImg != null &&width != null && height != null) {
-            val bitmap = ImageProcessing.getBackground(backgroundImg, Size(width, height), true);
-             filterPipeline?.setBackgroundImage(bitmap)
-          }
-      }
-
       //TODO implement enableFilters
       "enableFilters" -> {
         if(pluginBinding == null){
@@ -86,7 +69,7 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
         //disableFilters(call, result)
       }
 
-      /* call passes
+      /* call passes an object which is a map
        data = {
         "isInitialising": true,
         "backgroundPath": fullPath,
@@ -94,14 +77,16 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
         "sensitivity": 0.45,
        } */
       //TODO implement updateFilters
-      "updateFilters" -> {
+      "updateParameters" -> {
+
         if(pluginBinding == null){
           result.error("NOT_READY",  "pluginbinding is null", null)
           return
         }
 
-        //Create with width and height parameters from the call
-        //updateFilters(call, result)
+        val map = call.arguments as java.util.HashMap<*, *>
+        val filterParameters = FilterParameters(map)
+        filterPipeline!!.updateParameters(filterParameters)
       }
 
       "update" -> {
@@ -129,6 +114,23 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
          
         } else {
           result.error("FAILED UPDATE", "Image update unsuccessful", null)
+        }
+      }
+
+      //This is just used for debugging/testing
+      "setBackgroundImagePath" -> {
+        if(pluginBinding == null){
+          result.error("NOT_READY",  "pluginbinding is null", null)
+          return
+        }
+
+        val backgroundImg = call.argument("img") as? String
+        val width = call.argument<Int>("width")
+        val height = call.argument<Int>("height")
+
+        if (backgroundImg != null &&width != null && height != null) {
+          val bitmap = ImageProcessing.getBackground(backgroundImg, Size(width, height), true);
+          filterPipeline?.setBackgroundImage(bitmap)
         }
       }
  

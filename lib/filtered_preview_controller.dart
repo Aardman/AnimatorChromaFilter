@@ -71,6 +71,20 @@ class FilteredPreviewController {
 
 //API
 
+  Future<void> updateFilters( ) async {
+    if (!_initialized) {
+      throw Exception('FilterController not initialized');
+    }
+
+    try {
+      final params = {'img': backgroundImagePath, 'width': 1280, 'height': 720};
+      await _channel.invokeMethod('setBackgroundImagePath', params);
+    } catch (e) {
+      print('Error processing camera image: $e');
+    }
+  }
+
+
   Future<void> setBackgroundImagePath(String backgroundImagePath) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');

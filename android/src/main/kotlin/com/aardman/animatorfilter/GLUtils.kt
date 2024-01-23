@@ -9,7 +9,12 @@
 	import java.nio.ByteOrder
 	import kotlin.random.Random
 
-	object GLUtils {
+
+	/**
+	 * Helper functions should leave the openGL statemachine state as it was prior to calling
+	 * the method ie: no side effects remain on the state such as bindings.
+	 */
+	 object GLUtils {
 
 		fun createProgram(vertexSource: String, fragmentSource: String): Int {
 			val vertexShader = buildShader(GLES30.GL_VERTEX_SHADER, vertexSource)
@@ -42,6 +47,34 @@
 		)
 		checkEglError("setUpShaderProgram")
 		return program
+		}
+
+		fun setupFramebuffer(texture: Int): Int {
+
+			// Create a new framebuffer object
+			val frameBuffer = IntArray(1)
+			GLES30.glGenFramebuffers(1, frameBuffer, 0)
+			val newFrameBuffer = frameBuffer[0]
+
+			// Check if the framebuffer was created successfully
+			if (newFrameBuffer <= 0) {
+				throw RuntimeException("Failed to create a new framebuffer object.")
+			}
+
+			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, newFrameBuffer)
+
+			//load the working texture to the framebuffer
+			GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, texture, 0)
+
+			// Check if the framebuffer is complete
+			if (GLES30.glCheckFramebufferStatus(GLES30.GL_FRAMEBUFFER) != GLES30.GL_FRAMEBUFFER_COMPLETE) {
+				throw RuntimeException("Framebuffer is not complete.")
+			}
+
+			// Unbind the framebuffer
+			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+
+			return newFrameBuffer
 		}
 
 		fun updateTextureFromPlane(textureId: Int, planeData: ByteArray, width: Int, height: Int) {
@@ -177,7 +210,7 @@
 			buffer.rewind() // Rewind the buffer to read from the beginning
 			bitmap.copyPixelsFromBuffer(buffer)
 
-			// Clean up: Unbind and delete the framebuffer
+			// Clean up: Unbind and delete the framebuffer returning to the calling state
 			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 			GLES30.glDeleteFramebuffers(1, frameBuffer, 0)
 
@@ -200,7 +233,7 @@
 			buffer.rewind() // Rewind the buffer to read from the beginning
 			bitmap.copyPixelsFromBuffer(buffer)
 
-			// Unbind the framebuffer
+			// Unbind the framebuffer returning to the calling stat
 			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 
 			return bitmap
