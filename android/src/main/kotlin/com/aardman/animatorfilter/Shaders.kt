@@ -2,7 +2,7 @@ package com.aardman.animatorfilter
 
 public val VertexShaderSource = """#version 300 es
 	// vertex value between 0-1
-	in vec2 a_texCoord;
+	layout(location =  0) in vec2 a_texCoord;
 
 	uniform float u_flipY;
 
@@ -141,7 +141,7 @@ public var DebugFragmentShader = """#version 300 es
 
 
 public val BaseVertexShader = """#version 300 es
-     in vec2 a_texCoord; // Assuming you are using this attribute for vertex positions
+     layout(location =  0) in vec2 a_texCoord; // Assuming you are using this attribute for vertex positions
 
      void main() {
          // Convert from 0->1 to -1->+1 (clipspace)
