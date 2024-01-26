@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'dart:io';
 import 'dart:ui';
 
@@ -111,9 +112,16 @@ class FilteredPreviewController {
     }
 
     try {
+      /**
+       * NB: The U and V planes have a rowStride the width of the Y plane and  a pixel stride of 2
+       * The chrominance data needs to be sampled correctly from this to create textures for image conversion
+       */
       Uint8List yBytes = cameraImage.planes[0].bytes; // Y plane
       Uint8List uBytes = cameraImage.planes[1].bytes; // U plane
       Uint8List vBytes = cameraImage.planes[2].bytes; // V plane
+
+      // int rowStride    = cameraImage.planes[1].bytesPerRow;    // = 1280
+      // int? pixelStride = cameraImage.planes[1].bytesPerPixel; //  = 2
 
       if (yBytes == null || uBytes == null || vBytes == null) {
         print('One of the planes is null');
