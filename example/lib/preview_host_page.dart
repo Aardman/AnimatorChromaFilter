@@ -160,8 +160,13 @@ class _PreviewPageState  extends State<PreviewPage> {
   }
 
   initPreviewController(double width, double height) async {
-    //Init the controller
-    _controller = FilteredPreviewController();
+    //Init the controller each conforms to the FilteredPreviewController interface
+    if(Platform.isIOS){ 
+     _controller = FilteredPreviewControllerIoS();
+    }
+    else {
+      _controller = FilteredPreviewControllerAndroid();
+    }
     await _controller!.initialize(width, height);
 
     //update ui

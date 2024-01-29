@@ -9,69 +9,55 @@ import 'Image_processor.dart';
 import 'package:image/image.dart' as img;
 
 const MethodChannel _channel =  MethodChannel('animatorfilter');
+ 
+abstract class FilteredPreviewController   {
 
-class FilteredPreviewController {
-    FilteredPreviewController();
 
-    int _textureId = -1;
     double _width = 0;
     double _height = 0;
     bool _isDisposed = false;
     bool _initialized = false;
 
     var time = 0;
-    var iterations = 0;
+    var iterations = 0;  
 
+    //Platform specific 
+    //iOS
+    Uint8List _imageBytes = Uint8List(0);
+    //Android
+    int _textureId = -1; 
 
-//Getters 
- bool get initialized {
-    return _initialized;
-  }
+    //Getters 
+    bool get initialized {
+     return _initialized;
+    }
 
-  int get textureId {
-    return _textureId;
-  }
+    double get width {
+      return _width;
+    }
 
-  double get width {
-    return _width;
-  }
+    double get height {
+      return _height;
+    }
 
-  double get height {
-    return _height;
-  }
+    //Platform specific 
 
-//Lifecycle
+    //iOS
+    Uint8List get imageBytes {
+      return _imageBytes;
+    } 
+
+    //Android  
+    int get textureId {
+      return _textureId;
+    }
+
+   //Abstract Non-common platform specific API requirements
+   Future<void> initialize(double width, double height);
+   Future<void> update(CameraImage cameraImage); 
+
+  //Concrete API implementations
  
- Future<void> initialize(double width, double height) async {
-    if (_isDisposed) {
-      throw Exception('Disposed FilterPreviewController');
-    }
-
-    //Retain values locally for processing images from stream
-    _width = width;
-    _height = height;
-
-   // Initialize the filter on the native platform
-  //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
-  final params = {'width': width, 'height': height};
-  final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
-  _initialized = true;
-  _textureId = reply!['textureId'];
- }
-
-  Future<void> dispose() async {
-    if (_isDisposed) {
-      return;
-    }
-
-    // Dispose the filter on the native platform
-    _channel.invokeMethod('dispose');
-    _isDisposed = true;
-  }
-
-
-//API
-
   //TODO Implement correct parameters passing ( colour, sensitivity, backgroundImagePath)
   Future<void> updateFilters(Object params) async {
     if (!_initialized) {
@@ -84,8 +70,7 @@ class FilteredPreviewController {
     } catch (e) {
       print('Error processing camera image: $e');
     }
-  }
-
+  } 
 
   Future<void> setBackgroundImagePath(String backgroundImagePath) async {
     if (!_initialized) {
@@ -99,8 +84,43 @@ class FilteredPreviewController {
       print('Error processing camera image: $e');
     }
   }
+  
+    //Common Lifecycle 
+    Future<void> dispose() async {
+    if (_isDisposed) {
+      return;
+    }
+
+    // Dispose the filter on the native platform
+    _channel.invokeMethod('dispose');
+    _isDisposed = true;
+  } 
+
+}
 
 
+//Implementations of platform specific initialisation and image update
+class FilteredPreviewControllerAndroid extends FilteredPreviewController {
+   
+    FilteredPreviewControllerAndroid();
+   
+ Future<void> initialize(double width, double height) async {
+    if (_isDisposed) {
+      throw Exception('Disposed FilterPreviewControllerAndroid');
+    }
+
+    //Retain values locally for processing images from stream
+    _width = width;
+    _height = height;
+
+   // Initialize the filter on the native platform
+  //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
+  final params = {'width': width, 'height': height};
+  final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
+  _initialized = true;
+  _textureId = reply!['textureId'];
+ }
+  
   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
@@ -139,6 +159,70 @@ class FilteredPreviewController {
 
       Stopwatch stopwatch  = Stopwatch()..start();
       await _channel.invokeMethod('update', params);
+      stopwatch.stop();
+
+      time += stopwatch.elapsedMilliseconds;
+      iterations = iterations + 1;
+
+      if (iterations == 100){
+          print('100 updates executed in average of ${time/iterations}, time: ${time}');
+          print('seconds = ${time/1000}, fps = ${iterations/(time/1000)}');
+      }
+
+    } catch (e) {
+      print('Error processing camera image: $e');
+    }
+  } 
+}
+ 
+
+
+class FilteredPreviewControllerIoS extends FilteredPreviewController {
+   
+    FilteredPreviewControllerIoS();
+   
+ 
+ Future<void> initialize(double width, double height) async {
+    if (_isDisposed) {
+      throw Exception('Disposed FilterPreviewControllerIoS');
+    }
+
+    //Retain values locally for processing images from stream
+    _width = width;
+    _height = height;
+
+   // Initialize the filter on the native platform
+  //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
+  final params = {'width': width, 'height': height};
+  final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
+  _initialized = true; 
+ } 
+
+ 
+
+  Future<void> update(CameraImage cameraImage) async {
+    if (!_initialized) {
+      throw Exception('FilterController not initialized');
+    }
+
+    if (cameraImage == null || cameraImage.planes == null) {
+      print('Camera image or planes are null');
+      return;
+    }
+
+    try {
+         
+      final params = {
+        'imageData': cameraImage.planes[0],
+        'width': width,
+        'height': height
+      };
+
+      Stopwatch stopwatch  = Stopwatch()..start();
+     
+      final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
+      _initialized = true;
+      _imageBytes = reply!['imageBytes'];
       stopwatch.stop();
 
       time += stopwatch.elapsedMilliseconds;
