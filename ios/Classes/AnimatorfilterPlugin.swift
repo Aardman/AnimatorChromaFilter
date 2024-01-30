@@ -2,6 +2,9 @@ import Flutter
 import UIKit
 
 public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
+    
+  private var controller = AnimatorFilterController()
+    
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "animatorfilter", binaryMessenger: registrar.messenger())
     let instance = AnimatorfilterPlugin()
@@ -12,8 +15,11 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     switch call.method {
     case "getPlatformVersion":
       result("iOS " + UIDevice.current.systemVersion)
+    case "create":
+        controller.initialize()
+      result("iOS  initialised");
     case "initialise":
-      AnimatorFilterController.initialize()
+        controller.initialize()
       result("iOS  initialised");
     case "update":
       result("iOS  updated");

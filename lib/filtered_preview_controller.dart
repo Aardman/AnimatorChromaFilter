@@ -193,14 +193,14 @@ class FilteredPreviewControllerIoS extends FilteredPreviewController {
    // Initialize the filter on the native platform
   //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
   final params = {'width': width, 'height': height};
-  final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
+  await _channel.invokeMapMethod<String, dynamic>('create', params); 
   _initialized = true; 
  } 
  
 
   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
-      throw Exception('FilterController not initialized');
+      throw Exception('FilterControlrler not initialized');
     }
 
     if (cameraImage == null || cameraImage.planes == null) {

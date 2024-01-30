@@ -34,6 +34,7 @@ public class FilterPipeline : NSObject {
     var backgroundCIImage:CIImage?
     var scaledBackgroundCIImage:CIImage?
     var chromaFilter:BlendingChromaFilter?
+    public var filtersEnabled = false
     
     
     //MARK: - Initialise pipeline
@@ -41,7 +42,7 @@ public class FilterPipeline : NSObject {
     public override init(){
         super.init()
     }
-    
+     
     @objc
     public init(filterParameters:FilterParameters){
         super.init()
@@ -53,6 +54,16 @@ public class FilterPipeline : NSObject {
         updateChangedFilters(filterParameters)
     }
     
+    @objc
+    public func initialize(filterParameters:FilterParameters){
+        setupCoreImage()
+        self.filterParameters = filterParameters
+        //TODO: remove before release
+        saveSampleBackgroundToDocs()
+        //explicit init on initialisation, for default values
+        updateChangedFilters(filterParameters)
+    }
+     
     ///The default hw device will be selected, currently a MTLDevice, no need to explicitly add
     ///using using the alternative constructor for CIContext
     func setupCoreImage(){
