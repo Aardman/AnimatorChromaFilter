@@ -59,13 +59,21 @@ abstract class FilteredPreviewController   {
   //Concrete API implementations
  
   //TODO Implement correct parameters passing ( colour, sensitivity, backgroundImagePath)
+  /*
+  var data = {
+      "colour": getCurrentBaseHue(),
+      "backgroundPath": tempFileForChroma.path,
+      "sensitivity": getNormalisedSensitivityValue(_backgroundSensitivity),
+      // "sensitivity": 0.3,
+    };
+  */
   Future<void> updateFilters(Object params) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
     }
 
     try {
-      final params = {};
+     // final params = {};
       await _channel.invokeMethod('updateFilters', params);
     } catch (e) {
       print('Error processing camera image: $e');
@@ -208,19 +216,23 @@ class FilteredPreviewControllerIoS extends FilteredPreviewController {
       return;
     }
 
-    try {
-         
+    try { 
+
+      Uint8List data = cameraImage.planes[0].bytes;  
+ 
       final params = {
-        'imageData': cameraImage.planes[0],
-        'width': width,
-        'height': height
+        'imageData': data,
+        'width':  cameraImage.planes[0].width,
+        'height': cameraImage.planes[0].height,
+        'rowstride' : cameraImage.planes[0].bytesPerRow
       };
 
       Stopwatch stopwatch  = Stopwatch()..start();
      
-      final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
+      final reply = await _channel.invokeMapMethod<String, dynamic>('update', params); 
       _initialized = true;
-      _imageBytes = reply!['imageBytes'];
+      Uint8List imageData = reply!['imageBytes'];
+      _imageBytes = convertBGRA8888toRGBA8888(imageData);
       stopwatch.stop();
 
       time += stopwatch.elapsedMilliseconds;
@@ -235,6 +247,22 @@ class FilteredPreviewControllerIoS extends FilteredPreviewController {
       print('Error processing camera image: $e');
     }
   }
+
+ Uint8List convertUnmodifiableUint8ArrayViewToUint8List(Uint8List unmodifiableArray) {
+  return Uint8List.fromList(unmodifiableArray);
+}
+
+//TODO: perform in CoreImage on iOS side
+Uint8List convertBGRA8888toRGBA8888(Uint8List bgra) {
+  Uint8List rgba = convertUnmodifiableUint8ArrayViewToUint8List(bgra);
+  for (int i = 0; i < rgba.length; i += 4) {
+    // Swap the B and R channels.
+    var temp = rgba[i];
+    rgba[i] = rgba[i + 2];
+    rgba[i + 2] = temp;
+  }
+  return rgba;
+} 
 
     
 }

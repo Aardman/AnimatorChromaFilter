@@ -41,16 +41,28 @@ class FilteredPreviewIoS extends StatelessWidget {
       ),
     );
   }
-}
- 
+} 
 
- class ProcessedImageWidget extends StatelessWidget {
+ class ProcessedImageWidget extends StatefulWidget {
   final Uint8List imageData;
 
   const ProcessedImageWidget({Key? key, required this.imageData}) : super(key: key);
 
   @override
+  _ProcessedImageWidgetState createState() => _ProcessedImageWidgetState();
+}
+
+class _ProcessedImageWidgetState extends State<ProcessedImageWidget> {
+  @override
   Widget build(BuildContext context) {
-    return Image.memory(imageData);
+    return Image.memory(widget.imageData);
+  }
+
+  @override
+  void didUpdateWidget(ProcessedImageWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageData != widget.imageData) {
+      setState(() {});
+    }
   }
 }
