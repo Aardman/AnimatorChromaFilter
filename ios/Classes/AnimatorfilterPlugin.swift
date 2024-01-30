@@ -12,8 +12,20 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     switch call.method {
     case "getPlatformVersion":
       result("iOS " + UIDevice.current.systemVersion)
+    case "initialise":
+      AnimatorFilterController.initialize()
+      result("iOS  initialised");
+    case "update":
+      result("iOS  updated");
+    case "updateFilters":
+      result("iOS  updateFilters");
+    case "enableFilters":
+      result("iOS  enableFilters");
+    case "disableFilters":
+      result("iOS  disableFilters");
     default:
       result(FlutterMethodNotImplemented)
     }
-  }
+  } 
+
 }

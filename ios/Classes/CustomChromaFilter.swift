@@ -4,9 +4,8 @@
 //
 //  Created by Paul Freeman on 13/04/2022.
 //
-
 import Foundation
-
+import CoreImage
 
 /// CustomChromaFIlter replaces instances of the input colour using red,green,blue values
 /// with the transparent colour.  Threshold affects sensitivity and  smoothing provides a gradation

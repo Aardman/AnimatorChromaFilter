@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreImage
 
 
 /// BlendingChromaFilter replaces instances of the input colour using red,green,blue values

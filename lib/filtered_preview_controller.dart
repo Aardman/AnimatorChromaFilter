@@ -174,8 +174,7 @@ class FilteredPreviewControllerAndroid extends FilteredPreviewController {
     }
   } 
 }
- 
-
+  
 
 class FilteredPreviewControllerIoS extends FilteredPreviewController {
    
@@ -197,7 +196,6 @@ class FilteredPreviewControllerIoS extends FilteredPreviewController {
   final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
   _initialized = true; 
  } 
-
  
 
   Future<void> update(CameraImage cameraImage) async {

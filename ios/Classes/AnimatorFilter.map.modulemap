@@ -1,0 +1,12 @@
+//
+//  AnimatorFilter.map.modulemap
+//  animatorfilter
+//
+//  Created by Paul Freeman on 29/01/2024.
+//
+
+module AnimatorFilter {
+    header "AnimatorFilter.h"
+
+    export *
+}
