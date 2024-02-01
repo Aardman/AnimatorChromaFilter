@@ -37,10 +37,10 @@ public class FilterParameters: NSObject {
     public init(backgroundImage:String = "",
                 red:Float = 0.0, green:Float = 1.0, blue:Float = 0.0,
                 threshold:Float = 0.4,
-                maskVertex1: CGPoint,
-                maskVertex2: CGPoint,
-                maskVertex3: CGPoint,
-                maskVertex4: CGPoint){
+                maskVertex1: CGPoint = CGPointZero,
+                maskVertex2: CGPoint = CGPointZero,
+                maskVertex3: CGPoint = CGPointZero,
+                maskVertex4: CGPoint = CGPointZero){
         self.maskColor = (red, green, blue)
         self.backgroundImage = backgroundImage
         self.maskBounds = [maskVertex1, maskVertex2, maskVertex3, maskVertex4]

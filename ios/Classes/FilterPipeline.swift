@@ -8,6 +8,7 @@
 import UIKit
 import CoreImage
 import AVFoundation
+import Flutter
 
 @objc
 public class FilterPipeline : NSObject {
@@ -132,8 +133,71 @@ public class FilterPipeline : NSObject {
     func updateMaskBounds(_ bounds:MaskBounds){
         print("🍎 Mask Bounds Updated \(bounds)")
     }
- 
-    //MARK: - Objc API
+    
+    //MARK: - New API for revised processing from input raw image data - no @objc required
+    
+    /**
+     * Update and render  to be called on a background thread, write operations to NativeTexture.pixelbuffer to be  dispatched to the main thread
+     */
+    func update(_ rawBytes: Array<Int>, texture:NativeTexture) {
+        DispatchQueue.global(qos: .background).async {
+            self.process(rawBytes, texture: texture)
+        }
+    }
+    
+    func process(_ rawBytes: Array<Int>, texture:NativeTexture) {
+        //convert rawBytes to a CIImage in the correct format
+        let inputImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height)
+        //apply filtering
+        //write texture
+        if let inputImage {
+            writeToTexture(inputImage, nativeTexture: texture)
+        }
+    }
+    
+    func writeToTexture(_ ciImage: CIImage, nativeTexture: NativeTexture) {
+        CVPixelBufferCreate(kCFAllocatorDefault, nativeTexture.width, nativeTexture.height, kCVPixelFormatType_32BGRA, nil, &nativeTexture.pixelBuffer)
+        if let pixelBuffer = nativeTexture.pixelBuffer {
+            ciContext.render(ciImage, to: pixelBuffer)
+        }
+    }
+    
+    func convertToCIImage(with rawData:Array<Int>, width:Int, height:Int) -> CIImage? {
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CIContext()
+        
+        let result = CIImage()
+        return result
+        
+        //TBD
+//        rawData.withUnsafeBytes { bytes in
+//            if let dataProvider = CGDataProvider(dataInfo: nil, data: bytes, size: rawData.count, releaseData: {_,_,_ in }),
+//               let cgImage = CGImage(width: width,
+//                                     height: height,
+//                                     bitsPerComponent: 8,
+//                                     bitsPerPixel: 32,
+//                                     bytesPerRow: width * 4,
+//                                     space: colorSpace,
+//                                     bitmapInfo: bitmapInfo,
+//                                     provider: dataProvider,
+//                                     decode: nil,
+//                                     shouldInterpolate: true,
+//                                     intent: .defaultIntent) {
+//                let ciImage = CIImage(cgImage: cgImage)
+//                return ciImage
+//            }
+//        }
+       // return nil
+    }
+    
+    
+    //Non thread critical
+    public func setBackgroundImageFrom(path:String){
+        
+    }
+    
+    //MARK: - Objc API used in modified fork of Camera Plugin
     
     @objc
     //No need to lock pixel buffer currently
