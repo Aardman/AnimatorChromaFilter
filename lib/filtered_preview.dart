@@ -1,10 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'filtered_preview_controller.dart'; 
 import 'package:flutter/foundation.dart';  
+import 'package:flutter/material.dart';
 
 
-class FilteredPreview extends StatelessWidget {
-  const FilteredPreview(this.controller, {Key? key}) : super(key: key);
+class FilteredPreviewAndroid extends StatelessWidget {
+  const FilteredPreviewAndroid(this.controller, {Key? key}) : super(key: key);
   final FilteredPreviewController controller; 
 
   @override
@@ -23,8 +24,8 @@ class FilteredPreview extends StatelessWidget {
   }
 }
 
-class FilteredPreviewIoS extends StatelessWidget {
-  const FilteredPreviewIoS(this.controller, {Key? key}) : super(key: key);
+class FilteredPreviewIOS extends StatelessWidget {
+  const FilteredPreviewIOS(this.controller, {Key? key}) : super(key: key);
   final FilteredPreviewController controller; 
 
   @override
@@ -36,9 +37,12 @@ class FilteredPreviewIoS extends StatelessWidget {
     return AspectRatio (
       aspectRatio: controller.width / controller.height,
       //The texture id returned from the native code used to draw the preview texture
-      child: ProcessedImageWidget(
-        imageData: controller.imageBytes
-      ),
+      child:
+        controller.imageBytes.lengthInBytes == 0
+        ? const CircularProgressIndicator()
+        : ProcessedImageWidget(
+            imageData: controller.imageBytes
+        )
     );
   }
 } 

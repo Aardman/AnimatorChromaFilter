@@ -4,8 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:animatorfilter/filtered_preview.dart';
 import 'package:flutter/material.dart';
-import 'package:animatorfilter/filtered_preview_controller.dart';
-
+import 'package:animatorfilter/filtered_preview_controller.dart'; 
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -162,7 +161,7 @@ class _PreviewPageState  extends State<PreviewPage> {
   initPreviewController(double width, double height) async {
     //Init the controller each conforms to the FilteredPreviewController interface
     if(Platform.isIOS){ 
-     _controller = FilteredPreviewControllerIoS();
+     _controller = FilteredPreviewControllerIOS();
     }
     else {
       _controller = FilteredPreviewControllerAndroid();
@@ -205,7 +204,7 @@ class _PreviewPageState  extends State<PreviewPage> {
               : SizedBox(
             width: width,
             height: height,
-            child: FilteredPreview(_controller!),
+            child:  Platform.isAndroid ? FilteredPreviewAndroid(_controller!) : FilteredPreviewIOS(_controller!) ,
           ),
         ),
       );

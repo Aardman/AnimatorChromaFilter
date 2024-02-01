@@ -1,12 +1,13 @@
-import 'dart:ffi';
-import 'dart:io';
-import 'dart:ui';
+ import 'package:flutter/services.dart';
+import 'package:camera/camera.dart';  
+import 'package:image/image.dart' as img;  
 
-import 'package:flutter/services.dart';
-import 'package:camera/camera.dart';
-import 'package:image/image.dart';
-import 'Image_processor.dart';
-import 'package:image/image.dart' as img;
+import 'dart:async';      
+import 'package:flutter/material.dart'; 
+  
+import 'dart:ui' as ui;
+
+
 
 const MethodChannel _channel =  MethodChannel('animatorfilter');
  
@@ -73,7 +74,11 @@ abstract class FilteredPreviewController   {
     }
 
     try {
-     // final params = {};
+      final params = {
+        "colour": getCurrentBaseHue(),
+        "backgroundPath": tempFileForChroma.path,
+        "sensitivity": getNormalisedSensitivityValue(_backgroundSensitivity),
+      };
       await _channel.invokeMethod('updateFilters', params);
     } catch (e) {
       print('Error processing camera image: $e');
@@ -128,7 +133,7 @@ class FilteredPreviewControllerAndroid extends FilteredPreviewController {
   _initialized = true;
   _textureId = reply!['textureId'];
  }
-  
+ 
   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
@@ -148,7 +153,7 @@ class FilteredPreviewControllerAndroid extends FilteredPreviewController {
       Uint8List uBytes = cameraImage.planes[1].bytes; // U plane
       Uint8List vBytes = cameraImage.planes[2].bytes; // V plane
 
-      // int rowStride    = cameraImage.planes[1].bytesPerRow;    // = 1280
+      // int rowStride    = cameraImage.planes[1].bytesPerRow;   // = 1280
       // int? pixelStride = cameraImage.planes[1].bytesPerPixel; //  = 2
 
       if (yBytes == null || uBytes == null || vBytes == null) {
@@ -181,12 +186,11 @@ class FilteredPreviewControllerAndroid extends FilteredPreviewController {
       print('Error processing camera image: $e');
     }
   } 
-}
-  
+} 
 
-class FilteredPreviewControllerIoS extends FilteredPreviewController {
+class FilteredPreviewControllerIOS extends FilteredPreviewController {
    
-    FilteredPreviewControllerIoS();
+    FilteredPreviewControllerIOS();
    
  
  Future<void> initialize(double width, double height) async {
@@ -202,10 +206,10 @@ class FilteredPreviewControllerIoS extends FilteredPreviewController {
   //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
   final params = {'width': width, 'height': height};
   await _channel.invokeMapMethod<String, dynamic>('create', params); 
-  _initialized = true; 
- } 
- 
+  _initialized = true;  
 
+ }  
+ 
   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
       throw Exception('FilterControlrler not initialized');
@@ -229,12 +233,12 @@ class FilteredPreviewControllerIoS extends FilteredPreviewController {
 
       Stopwatch stopwatch  = Stopwatch()..start();
      
-      final reply = await _channel.invokeMapMethod<String, dynamic>('update', params); 
-      _initialized = true;
+     //call into plugin/iOS
+      final reply = await _channel.invokeMapMethod<String, dynamic>('update', params);
       Uint8List imageData = reply!['imageBytes'];
-      _imageBytes = convertBGRA8888toRGBA8888(imageData);
-      stopwatch.stop();
-
+      _imageBytes =  await getDataAsPNGEncoded(imageData, width.toInt(), height.toInt());
+      stopwatch.stop(); 
+  
       time += stopwatch.elapsedMilliseconds;
       iterations = iterations + 1;
 
@@ -246,7 +250,30 @@ class FilteredPreviewControllerIoS extends FilteredPreviewController {
     } catch (e) {
       print('Error processing camera image: $e');
     }
-  }
+  }  
+
+Future<Uint8List> getDataAsPNGEncoded(Uint8List rawCameraData, int width, int height) async {
+  
+  var completer = Completer<ui.Image>();
+
+  //Uint8List data  = convertBGRA8888toRGBA8888(rawCameraData);
+
+  // Decode the camera data to an Image object
+  ui.decodeImageFromPixels(
+    rawCameraData,
+    width,
+    height,
+    ui.PixelFormat.bgra8888,
+        (ui.Image img) {
+        completer.complete(img);
+    },
+  );
+
+  ui.Image image     = await completer.future;
+  ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+  Uint8List pngBytes = byteData!.buffer.asUint8List(); 
+  return pngBytes;
+} 
 
  Uint8List convertUnmodifiableUint8ArrayViewToUint8List(Uint8List unmodifiableArray) {
   return Uint8List.fromList(unmodifiableArray);
