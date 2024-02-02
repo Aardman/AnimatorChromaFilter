@@ -15,23 +15,23 @@ public class FilterPipeline : NSObject {
     
     //Resources
     var ciContext : CIContext!
-      
+    
     //Filters
     //This could simply be a Dictionary, but then we'd need to convert any structured values
     //whenever using them, this way we only perform such structure transforms in the constructor
     //of FilterParameters
     @objc public var filterParameters:FilterParameters? {
-         willSet {
-             //update the pipeline with whichever values are provided
-             updateChangedFilters(newValue)
-             //copy any new values
-             if newValue?.backgroundImage == nil { newValue?.backgroundImage = filterParameters?.backgroundImage }
-             if newValue?.maskColor       == nil { newValue?.maskColor = filterParameters?.maskColor }
-             if newValue?.threshold       == nil { newValue?.threshold = filterParameters?.threshold }
-             if newValue?.maskBounds      == nil { newValue?.maskBounds = filterParameters?.maskBounds }
-         }
+        willSet {
+            //update the pipeline with whichever values are provided
+            updateChangedFilters(newValue)
+            //copy any new values
+            if newValue?.backgroundImage == nil { newValue?.backgroundImage = filterParameters?.backgroundImage }
+            if newValue?.maskColor       == nil { newValue?.maskColor = filterParameters?.maskColor }
+            if newValue?.threshold       == nil { newValue?.threshold = filterParameters?.threshold }
+            if newValue?.maskBounds      == nil { newValue?.maskBounds = filterParameters?.maskBounds }
+        }
     }
-     
+    
     var backgroundCIImage:CIImage?
     var scaledBackgroundCIImage:CIImage?
     var chromaFilter:BlendingChromaFilter?
@@ -43,7 +43,7 @@ public class FilterPipeline : NSObject {
     public override init(){
         super.init()
     }
-     
+    
     @objc
     public init(filterParameters:FilterParameters){
         super.init()
@@ -64,7 +64,7 @@ public class FilterPipeline : NSObject {
         //explicit init on initialisation, for default values
         updateChangedFilters(filterParameters)
     }
-     
+    
     ///The default hw device will be selected, currently a MTLDevice, no need to explicitly add
     ///using using the alternative constructor for CIContext
     func setupCoreImage(){
@@ -78,7 +78,7 @@ public class FilterPipeline : NSObject {
     }
     
     //MARK:  - Filter init and update
-  
+    
     ///for any non-nil data in the new set of parameters, update the
     ///filter parameters which may involve re-creating one or more CIFilters
     func updateChangedFilters(_ newValue:FilterParameters?){
@@ -101,7 +101,7 @@ public class FilterPipeline : NSObject {
         var threshold = filterParameters?.threshold
         if let t = newParams.threshold {
             threshold = t
-        } 
+        }
         
         //gather changes to colour and threshold
         updateCustomChromaFilter(colour, threshold)
@@ -116,7 +116,7 @@ public class FilterPipeline : NSObject {
     
     func updateCustomChromaFilter(_ colour: (Float, Float, Float)?, _ threshold:Float?){
         if self.chromaFilter == nil {
-           chromaFilter = BlendingChromaFilter()
+            chromaFilter = BlendingChromaFilter()
         }
         if let colour = colour {
             self.chromaFilter?.red   = colour.0
@@ -164,36 +164,35 @@ public class FilterPipeline : NSObject {
     
     func convertToCIImage(with rawData: Data, width: Int, height: Int) -> CIImage? {
         let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue)
-         let colorSpace = CGColorSpaceCreateDeviceRGB()
-
-         return rawData.withUnsafeBytes { rawBufferPointer -> CIImage? in
-             // Ensure you have a valid pointer to the data
-             guard let pointer = rawBufferPointer.baseAddress else { return nil }
-             
-             // Create the CGDataProvider with the raw pointer
-             guard let dataProvider = CGDataProvider(dataInfo: nil, data: pointer, size: rawData.count, releaseData: {_,_,_ in }),
-                   let cgImage = CGImage(width: width,
-                                         height: height,
-                                         bitsPerComponent: 8,
-                                         bitsPerPixel: 32,
-                                         bytesPerRow: width * 4,
-                                         space: colorSpace,
-                                         bitmapInfo: bitmapInfo,
-                                         provider: dataProvider,
-                                         decode: nil,
-                                         shouldInterpolate: true,
-                                         intent: .defaultIntent) else { return nil }
-             
-             // Create and return the CIImage
-             return CIImage(cgImage: cgImage)
-         }
-         // The return type matches the closure now, so no warning about unused results should appear.
-     }
-    
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        
+        return rawData.withUnsafeBytes { rawBufferPointer -> CIImage? in
+            // Ensure you have a valid pointer to the data
+            guard let pointer = rawBufferPointer.baseAddress else { return nil }
+            
+            // Create the CGDataProvider with the raw pointer
+            guard let dataProvider = CGDataProvider(dataInfo: nil, data: pointer, size: rawData.count, releaseData: {_,_,_ in }),
+                  let cgImage = CGImage(width: width,
+                                        height: height,
+                                        bitsPerComponent: 8,
+                                        bitsPerPixel: 32,
+                                        bytesPerRow: width * 4,
+                                        space: colorSpace,
+                                        bitmapInfo: bitmapInfo,
+                                        provider: dataProvider,
+                                        decode: nil,
+                                        shouldInterpolate: true,
+                                        intent: .defaultIntent) else { return nil }
+            
+            // Create and return the CIImage
+            return CIImage(cgImage: cgImage)
+        }
+        // The return type matches the closure now, so no warning about unused results should appear.
+    }
     
     //Non thread critical
     public func setBackgroundImageFrom(path:String){
-        
+        updateBackground(path)
     }
     
     //MARK: - Objc API used in modified fork of Camera Plugin
@@ -209,7 +208,7 @@ public class FilterPipeline : NSObject {
         guard let filtered = applyFilters(inputImage: outputImage) else { return }
         ciContext.render(filtered, to: buf)
     }
-       
+    
     
     @objc
     @available(iOS 11.0, *)
@@ -219,9 +218,9 @@ public class FilterPipeline : NSObject {
         
         var orientationMetadata:UInt32 = FilterConstants.defaultOrientationPortraitUp
         if let orientationInt = photo?.metadata[String(kCGImagePropertyOrientation)] as? UInt32 {
-           orientationMetadata = orientationInt
+            orientationMetadata = orientationInt
         }
-    
+        
         guard let rawPhoto =  photo?.cgImageRepresentation() else { return nil }
         let rawCIImage  = CIImage(cgImage: rawPhoto)
         let cameraImage = rawCIImage.oriented(forExifOrientation: Int32(orientationMetadata))
@@ -244,38 +243,38 @@ public class FilterPipeline : NSObject {
     /// Filters and transforms for the input image which must be correctly rotated
     /// prior to application of filters
     func applyFilters(inputImage camImage: CIImage) -> CIImage? {
-         
+        
         if scaledBackgroundCIImage == nil {
             //Test background when there is no background image available
-             let colourGen = CIFilter(name: "CIConstantColorGenerator")
-             colourGen?.setValue(CIColor(red: 1.0, green: 0.0, blue: 0.0), forKey: "inputColor")
-             scaledBackgroundCIImage = colourGen?.outputImage
+            let colourGen = CIFilter(name: "CIConstantColorGenerator")
+            colourGen?.setValue(CIColor(red: 1.0, green: 0.0, blue: 0.0), forKey: "inputColor")
+            scaledBackgroundCIImage = colourGen?.outputImage
         }
-          
+        
         guard let chromaFilter = self.chromaFilter else { return camImage }
-
+        
         //Chroma
         chromaFilter.cameraImage = camImage
         chromaFilter.backgroundImage = scaledBackgroundCIImage
-
+        
         //Apply and composite with the background image
         guard let chromaBlendedImage = chromaFilter.outputImage else { return camImage }
- 
+        
         return chromaBlendedImage
     }
-      
     
-   //MARK: - Background formatting
     
-   //Camera image is a correctly oriented CI image from the camera, ie: if an AVPhotoResponse
-   //it has already been rotated to align with the input background
-   func transformBackgroundToFit(backgroundCIImage:CIImage, cameraImage:CIImage) -> CIImage?  {
-       let scaledImage = scaleImage(fromImage: backgroundCIImage, into: cameraImage.getSize())
-       let translatedImage = translateImage(fromImage:scaledImage, centeredBy:cameraImage.getSize())
-       let croppedImage = cropImage(ciImage: translatedImage, to: cameraImage.getSize())
-       return croppedImage
-   }
-     
+    //MARK: - Background formatting
+    
+    //Camera image is a correctly oriented CI image from the camera, ie: if an AVPhotoResponse
+    //it has already been rotated to align with the input background
+    func transformBackgroundToFit(backgroundCIImage:CIImage, cameraImage:CIImage) -> CIImage?  {
+        let scaledImage = scaleImage(fromImage: backgroundCIImage, into: cameraImage.getSize())
+        let translatedImage = translateImage(fromImage:scaledImage, centeredBy:cameraImage.getSize())
+        let croppedImage = cropImage(ciImage: translatedImage, to: cameraImage.getSize())
+        return croppedImage
+    }
+    
     //MARK: Scale background
     
     /// - into image is only provided for calculating the  desired size of the scaled output
@@ -288,7 +287,7 @@ public class FilterPipeline : NSObject {
         scaleFilter.setValue(1.0,     forKey: kCIInputAspectRatioKey)
         return scaleFilter.outputImage
     }
-
+    
     
     //Scale to fit the height
     //We will allow the background to misalign with the center at this point. We may need
@@ -297,8 +296,8 @@ public class FilterPipeline : NSObject {
         return  toFitWithinHeightOf.height / input.height
     }
     
-   //MARK: Translate background
-     
+    //MARK: Translate background
+    
     //Return the CGRect that is a window into the target size from the center
     func translateImage(fromImage:CIImage?, centeredBy targetSize:CGSize) -> CIImage? {
         guard let inputImage = fromImage else  { return nil }
@@ -307,7 +306,7 @@ public class FilterPipeline : NSObject {
         return inputImage.transformed(by: transform)
     }
     
-   //MARK: Crop background
+    //MARK: Crop background
     
     //Crop out from the center of the provided CIImage
     //Background must be translated first
@@ -324,7 +323,7 @@ public class FilterPipeline : NSObject {
             return ciImage?.cropped(to: windowRect)
         }
     }
-     
+    
 }
 
 //MARK: - Helper extensions
@@ -347,14 +346,14 @@ extension FileManager {
         let path = "\(applicationDocumentsDirectory())/\(filename)"
         let fileUrl = URL(fileURLWithPath: path)
         var sourceData:Data? = image.jpegData(compressionQuality: 1.0)
-          do {
-              try sourceData?.write(to: fileUrl)
-          }
-          catch {
-              print("Failed to write \(path)")
-              sourceData = nil
-          }
-          sourceData = nil
+        do {
+            try sourceData?.write(to: fileUrl)
+        }
+        catch {
+            print("Failed to write \(path)")
+            sourceData = nil
+        }
+        sourceData = nil
     }
     
 }
