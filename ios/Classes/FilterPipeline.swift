@@ -146,8 +146,8 @@ public class FilterPipeline : NSObject {
     }
     
     func process(_ rawBytes: Array<Int>, texture:NativeTexture) {
-        //convert rawBytes to a CIImage in the correct format
-        let inputImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height)
+        let data = rawBytes.withUnsafeBytes { Data($0) }
+        let inputImage = convertToCIImage(with: data, width: texture.width, height: texture.height)
         //apply filtering
         //write texture
         if let inputImage {
@@ -162,34 +162,33 @@ public class FilterPipeline : NSObject {
         }
     }
     
-    func convertToCIImage(with rawData:Array<Int>, width:Int, height:Int) -> CIImage? {
+    func convertToCIImage(with rawData: Data, width: Int, height: Int) -> CIImage? {
         let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue)
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let context = CIContext()
-        
-        let result = CIImage()
-        return result
-        
-        //TBD
-//        rawData.withUnsafeBytes { bytes in
-//            if let dataProvider = CGDataProvider(dataInfo: nil, data: bytes, size: rawData.count, releaseData: {_,_,_ in }),
-//               let cgImage = CGImage(width: width,
-//                                     height: height,
-//                                     bitsPerComponent: 8,
-//                                     bitsPerPixel: 32,
-//                                     bytesPerRow: width * 4,
-//                                     space: colorSpace,
-//                                     bitmapInfo: bitmapInfo,
-//                                     provider: dataProvider,
-//                                     decode: nil,
-//                                     shouldInterpolate: true,
-//                                     intent: .defaultIntent) {
-//                let ciImage = CIImage(cgImage: cgImage)
-//                return ciImage
-//            }
-//        }
-       // return nil
-    }
+         let colorSpace = CGColorSpaceCreateDeviceRGB()
+
+         return rawData.withUnsafeBytes { rawBufferPointer -> CIImage? in
+             // Ensure you have a valid pointer to the data
+             guard let pointer = rawBufferPointer.baseAddress else { return nil }
+             
+             // Create the CGDataProvider with the raw pointer
+             guard let dataProvider = CGDataProvider(dataInfo: nil, data: pointer, size: rawData.count, releaseData: {_,_,_ in }),
+                   let cgImage = CGImage(width: width,
+                                         height: height,
+                                         bitsPerComponent: 8,
+                                         bitsPerPixel: 32,
+                                         bytesPerRow: width * 4,
+                                         space: colorSpace,
+                                         bitmapInfo: bitmapInfo,
+                                         provider: dataProvider,
+                                         decode: nil,
+                                         shouldInterpolate: true,
+                                         intent: .defaultIntent) else { return nil }
+             
+             // Create and return the CIImage
+             return CIImage(cgImage: cgImage)
+         }
+         // The return type matches the closure now, so no warning about unused results should appear.
+     }
     
     
     //Non thread critical
