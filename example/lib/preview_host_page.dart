@@ -204,7 +204,7 @@ class _PreviewPageState  extends State<PreviewPage> {
               : SizedBox(
             width: width,
             height: height,
-            child:  Platform.isAndroid ? FilteredPreviewAndroid(_controller!) : FilteredPreviewIOS(_controller!) ,
+            child:  FilteredPreview(_controller!),
           ),
         ),
       );

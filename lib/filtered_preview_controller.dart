@@ -12,8 +12,7 @@ import 'dart:ui' as ui;
 const MethodChannel _channel =  MethodChannel('animatorfilter');
  
 abstract class FilteredPreviewController   {
-
-
+ 
     double _width = 0;
     double _height = 0;
     bool _isDisposed = false;
@@ -53,12 +52,28 @@ abstract class FilteredPreviewController   {
       return _textureId;
     }
 
-   //Abstract Non-common platform specific API requirements
-   Future<void> initialize(double width, double height);
+   //Abstract Non-common platform specific API requirements 
    Future<void> update(CameraImage cameraImage); 
-
-  //Concrete API implementations
  
+  //Concrete API implementations 
+
+  Future<void> initialize(double width, double height) async {
+      if (_isDisposed) {
+        throw Exception('Disposed FilterPreviewControllerAndroid');
+      }
+
+      //Retain values locally for processing images from stream
+      _width = width;
+      _height = height;
+
+    // Initialize the filter on the native platform
+    //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
+    final params = {'width': width, 'height': height};
+    final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
+    _initialized = true;
+    _textureId = reply!['textureId'];
+  }  
+
   //TODO Implement correct parameters passing ( colour, sensitivity, backgroundImagePath)
   /*
   var data = {
@@ -75,9 +90,9 @@ abstract class FilteredPreviewController   {
 
     try {
       final params = {
-        "colour": getCurrentBaseHue(),
-        "backgroundPath": tempFileForChroma.path,
-        "sensitivity": getNormalisedSensitivityValue(_backgroundSensitivity),
+        // "colour": getCurrentBaseHue(),
+        // "backgroundPath": tempFileForChroma.path,
+        // "sensitivity": getNormalisedSensitivityValue(_backgroundSensitivity),
       };
       await _channel.invokeMethod('updateFilters', params);
     } catch (e) {
@@ -115,24 +130,8 @@ abstract class FilteredPreviewController   {
 //Implementations of platform specific initialisation and image update
 class FilteredPreviewControllerAndroid extends FilteredPreviewController {
    
-    FilteredPreviewControllerAndroid();
-   
- Future<void> initialize(double width, double height) async {
-    if (_isDisposed) {
-      throw Exception('Disposed FilterPreviewControllerAndroid');
-    }
-
-    //Retain values locally for processing images from stream
-    _width = width;
-    _height = height;
-
-   // Initialize the filter on the native platform
-  //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
-  final params = {'width': width, 'height': height};
-  final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
-  _initialized = true;
-  _textureId = reply!['textureId'];
- }
+    FilteredPreviewControllerAndroid(); 
+ 
  
   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
@@ -191,24 +190,7 @@ class FilteredPreviewControllerAndroid extends FilteredPreviewController {
 class FilteredPreviewControllerIOS extends FilteredPreviewController {
    
     FilteredPreviewControllerIOS();
-   
- 
- Future<void> initialize(double width, double height) async {
-    if (_isDisposed) {
-      throw Exception('Disposed FilterPreviewControllerIoS');
-    }
-
-    //Retain values locally for processing images from stream
-    _width = width;
-    _height = height;
-
-   // Initialize the filter on the native platform
-  //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
-  final params = {'width': width, 'height': height};
-  await _channel.invokeMapMethod<String, dynamic>('create', params); 
-  _initialized = true;  
-
- }  
+    
  
   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
@@ -235,8 +217,7 @@ class FilteredPreviewControllerIOS extends FilteredPreviewController {
      
      //call into plugin/iOS
       final reply = await _channel.invokeMapMethod<String, dynamic>('update', params);
-      Uint8List imageData = reply!['imageBytes'];
-      _imageBytes =  await getDataAsPNGEncoded(imageData, width.toInt(), height.toInt());
+      bool result = reply!['result'];  
       stopwatch.stop(); 
   
       time += stopwatch.elapsedMilliseconds;
