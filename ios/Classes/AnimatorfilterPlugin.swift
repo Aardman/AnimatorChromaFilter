@@ -14,6 +14,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         if let instance{
             instance.flutterTextureRegistry = registrar.textures()
             registrar.addMethodCallDelegate(instance, channel: channel)
+            instance.pipeline = FilterPipeline(filterParameters: FilterParameters())
         }
     }
     
@@ -43,16 +44,17 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     
     //Handlers
     func handleCreate(_ call: FlutterMethodCall, result: @escaping FlutterResult){
-        if let arguments = call.arguments as? NSDictionary,
-           let w = arguments["width"] as? Int,
-           let h = arguments["height"] as? Int {
-            AnimatorfilterPlugin.instance?.createNativeTexture(width: w, height: h)
-            let data:[String: Any] = ["result": true]
-            result(data);
-        }
-        else{
-            result(["result", "false"])
-        }
+        
+        guard let arguments = call.arguments as? NSDictionary,
+              let w = arguments["width"] as? Int,
+              let h = arguments["height"] as? Int else { result(["textureId", -1]);  return}
+        
+        AnimatorfilterPlugin.instance?.createNativeTexture(width: w, height: h)
+        
+        guard let textureId =  AnimatorfilterPlugin.instance?.nativeTexture?.textureId else { result(["textureId", -1]);  return}
+        let data:[String: Int64] = ["textureId": textureId]
+        result(data)
+        
     }
     
     //return true if successful
@@ -71,14 +73,14 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     //just write the input bgra8888 image data to the native texture to display in widget
     func handleUpdate(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         if let arguments = call.arguments as? NSDictionary,
-            let imageBytes = arguments["imageData"] as? Array<Int>,
-            let texture = AnimatorfilterPlugin.instance?.nativeTexture {
-            AnimatorfilterPlugin.instance?.pipeline?.update(imageBytes, texture:texture)
-            let data:[String: Any] = ["result": true]
-            result(data);
+           let flutterData = arguments["imageData"] as? FlutterStandardTypedData,
+           let texture = AnimatorfilterPlugin.instance?.nativeTexture {
+            let rawImageData = flutterData.data as NSData
+            AnimatorfilterPlugin.instance?.pipeline?.update(rawImageData as Data, texture:texture)
+            result(["result": true]);
         }
         else{
-            result(["error", "no data"])
+            result(["error", false])
         }
     }
     
@@ -87,7 +89,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
             let params = parseParams(arguments)
             pipeline?.filterParameters  = params
             let data:[String: Any] = ["result": true]
-            result(data);
+            result( ["result": true]);
         }
         else{
             result(["result", "false"])
@@ -117,13 +119,13 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     func handleEnable(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         AnimatorfilterPlugin.instance?.pipeline?.filtersEnabled = true
         let data:[String: Any] = ["result": "iOS  enableFilters"]
-        result(data);
+        result( ["result": true]);
     }
     
     func handleDisable(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         AnimatorfilterPlugin.instance?.pipeline?.filtersEnabled = false
         let data:[String: Any] = ["result": "iOS  disableFilters"]
-        result(data);
+        result( ["result": true]);
     }
     
     func handleDispose(_ call: FlutterMethodCall, result: @escaping FlutterResult){

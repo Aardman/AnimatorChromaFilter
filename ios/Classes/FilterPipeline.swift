@@ -74,6 +74,10 @@ public class FilterPipeline : NSObject {
     func saveSampleBackgroundToDocs(){
         if let backgroundImage = UIImage(named: "demo_background") {
             FileManager.default.save(filename: "demo_background.jpg", image: backgroundImage)
+            if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let fileURL = documentsDirectory.appendingPathComponent("demo_background.jpg")
+                updateBackground(fileURL.path)
+            }
         }
     }
     
@@ -139,16 +143,18 @@ public class FilterPipeline : NSObject {
     /**
      * Update and render  to be called on a background thread, write operations to NativeTexture.pixelbuffer to be  dispatched to the main thread
      */
-    func update(_ rawBytes: Array<Int>, texture:NativeTexture) {
-        DispatchQueue.global(qos: .background).async {
+    func update(_ rawBytes: Data, texture:NativeTexture) {
+      // DispatchQueue.global(qos: .background).async {
             self.process(rawBytes, texture: texture)
-        }
+      // }
     }
     
-    func process(_ rawBytes: Array<Int>, texture:NativeTexture) {
-        let data = rawBytes.withUnsafeBytes { Data($0) }
-        let inputImage = convertToCIImage(with: data, width: texture.width, height: texture.height)
+    func process(_ rawBytes: Data, texture:NativeTexture) {
+        let inputImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height)
         //apply filtering
+        DispatchQueue.global(qos: .background).async {
+           let image  = UIImage(ciImage: inputImage!)
+        }
         //write texture
         if let inputImage {
             writeToTexture(inputImage, nativeTexture: texture)
@@ -158,7 +164,9 @@ public class FilterPipeline : NSObject {
     func writeToTexture(_ ciImage: CIImage, nativeTexture: NativeTexture) {
         CVPixelBufferCreate(kCFAllocatorDefault, nativeTexture.width, nativeTexture.height, kCVPixelFormatType_32BGRA, nil, &nativeTexture.pixelBuffer)
         if let pixelBuffer = nativeTexture.pixelBuffer {
-            ciContext.render(ciImage, to: pixelBuffer)
+           // DispatchQueue.main.async {
+                self.ciContext.render(ciImage, to: pixelBuffer)
+           // }
         }
     }
     
@@ -176,7 +184,7 @@ public class FilterPipeline : NSObject {
                                         height: height,
                                         bitsPerComponent: 8,
                                         bitsPerPixel: 32,
-                                        bytesPerRow: width * 4,
+                                        bytesPerRow: width * 2,
                                         space: colorSpace,
                                         bitmapInfo: bitmapInfo,
                                         provider: dataProvider,
