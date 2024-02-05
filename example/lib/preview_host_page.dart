@@ -47,8 +47,9 @@ class _PreviewPageState  extends State<PreviewPage> {
 
   init() async {
     await initCamera();
-    _textureHeight = _camController!.value.previewSize!.height;
-    _textureWidth = _camController!.value.previewSize!.width;
+    //TODO remove hard coded values
+    _textureHeight =  1280; // _camController!.value.previewSize!.height;
+    _textureWidth =   720; //_camController!.value.previewSize!.width;
     await initPreviewController(_textureWidth, _textureHeight);
     await startImageStream();
 
