@@ -9,12 +9,15 @@ import UIKit
 import CoreImage
 import AVFoundation
 import Flutter
+import VideoToolbox
 
 @objc
 public class FilterPipeline : NSObject {
     
     //Resources
     var ciContext : CIContext!
+    var flutterTextureRegistry: FlutterTextureRegistry?
+    var nativeTexture:NativeTexture?
     
     //Filters
     //This could simply be a Dictionary, but then we'd need to convert any structured values
@@ -45,10 +48,11 @@ public class FilterPipeline : NSObject {
     }
     
     @objc
-    public init(filterParameters:FilterParameters){
+    public init(filterParameters:FilterParameters, flutterTextureRegistry:FlutterTextureRegistry){
         super.init()
         setupCoreImage()
         self.filterParameters = filterParameters
+        self.flutterTextureRegistry =  flutterTextureRegistry
         //TODO: remove before release
         saveSampleBackgroundToDocs()
         //explicit init on initialisation, for default values
@@ -144,47 +148,64 @@ public class FilterPipeline : NSObject {
      * Update and render  to be called on a background thread, write operations to NativeTexture.pixelbuffer to be  dispatched to the main thread
      */
     func update(_ rawBytes: Data, texture:NativeTexture) {
-      // DispatchQueue.global(qos: .background).async {
+       //DispatchQueue.global(qos: .background).async {
             self.process(rawBytes, texture: texture)
-      // }
+       //}
     }
     
     func process(_ rawBytes: Data, texture:NativeTexture) {
-        let inputImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height)
+        guard let ciImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height) else { print("❌ failed to convert input image"); return}
+        
+        var outputImage:CIImage?
+        
         //apply filtering
-        DispatchQueue.global(qos: .background).async {
-           let image  = UIImage(ciImage: inputImage!)
+        if (filtersEnabled){
+             outputImage = applyFilters(inputImage: ciImage)
         }
-        //write texture
-        if let inputImage {
-            writeToTexture(inputImage, nativeTexture: texture)
+        else {
+            outputImage = ciImage
         }
+         
+        if let outputImage {
+            let pixelBuffer = getPixelBuffer(ciImage)
+            if let pixelBuffer,
+               let flutterTextureRegistry {
+                nativeTexture?.updatePixelBuffer(with: pixelBuffer)
+                nativeTexture?.textureFrameAvailable(registry: flutterTextureRegistry)
+            }
+        }
+    } 
+     
+    func getPixelBuffer(_ ciImage:CIImage) -> CVPixelBuffer? {
+        var buffer: CVPixelBuffer?
+        if let width = self.nativeTexture?.width,
+           let height = self.nativeTexture?.height {
+            CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, nil, &buffer)
+            if let buffer {
+                ciContext.render(ciImage, to: buffer)
+            }
+        }
+        return buffer
     }
     
-    func writeToTexture(_ ciImage: CIImage, nativeTexture: NativeTexture) {
-        CVPixelBufferCreate(kCFAllocatorDefault, nativeTexture.width, nativeTexture.height, kCVPixelFormatType_32BGRA, nil, &nativeTexture.pixelBuffer)
-        if let pixelBuffer = nativeTexture.pixelBuffer {
-           // DispatchQueue.main.async {
-                self.ciContext.render(ciImage, to: pixelBuffer)
-           // }
-        }
+    func filter(_  ciImage: CIImage) -> CIImage? {
+        return ciImage
     }
     
     func convertToCIImage(with rawData: Data, width: Int, height: Int) -> CIImage? {
-        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue)
+        //BGRA8888, least significant bit hence byteOrder32Little
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
+        
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         
         return rawData.withUnsafeBytes { rawBufferPointer -> CIImage? in
-            // Ensure you have a valid pointer to the data
             guard let pointer = rawBufferPointer.baseAddress else { return nil }
-            
-            // Create the CGDataProvider with the raw pointer
             guard let dataProvider = CGDataProvider(dataInfo: nil, data: pointer, size: rawData.count, releaseData: {_,_,_ in }),
                   let cgImage = CGImage(width: width,
                                         height: height,
                                         bitsPerComponent: 8,
                                         bitsPerPixel: 32,
-                                        bytesPerRow: width * 2,
+                                        bytesPerRow: width * 4,
                                         space: colorSpace,
                                         bitmapInfo: bitmapInfo,
                                         provider: dataProvider,
@@ -195,7 +216,6 @@ public class FilterPipeline : NSObject {
             // Create and return the CIImage
             return CIImage(cgImage: cgImage)
         }
-        // The return type matches the closure now, so no warning about unused results should appear.
     }
     
     //Non thread critical

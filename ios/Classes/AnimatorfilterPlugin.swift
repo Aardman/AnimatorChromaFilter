@@ -14,7 +14,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         if let instance{
             instance.flutterTextureRegistry = registrar.textures()
             registrar.addMethodCallDelegate(instance, channel: channel)
-            instance.pipeline = FilterPipeline(filterParameters: FilterParameters())
+            instance.pipeline = FilterPipeline(filterParameters: FilterParameters(), flutterTextureRegistry: registrar.textures())
         }
     }
     
@@ -52,6 +52,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         AnimatorfilterPlugin.instance?.createNativeTexture(width: w, height: h)
         
         guard let textureId =  AnimatorfilterPlugin.instance?.nativeTexture?.textureId else { result(["textureId", -1]);  return}
+        pipeline?.nativeTexture = AnimatorfilterPlugin.instance?.nativeTexture
         let data:[String: Int64] = ["textureId": textureId]
         result(data)
         
