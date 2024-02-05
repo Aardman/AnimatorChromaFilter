@@ -4,10 +4,7 @@ import 'package:image/image.dart' as img;
 
 import 'dart:async';      
 import 'package:flutter/material.dart'; 
-  
-import 'dart:ui' as ui;
-
-
+    
 
 const MethodChannel _channel =  MethodChannel('animatorfilter');
  
@@ -131,8 +128,7 @@ abstract class FilteredPreviewController   {
 class FilteredPreviewControllerAndroid extends FilteredPreviewController {
    
     FilteredPreviewControllerAndroid(); 
- 
- 
+  
   Future<void> update(CameraImage cameraImage) async {
     if (!_initialized) {
       throw Exception('FilterController not initialized');
@@ -189,7 +185,7 @@ class FilteredPreviewControllerAndroid extends FilteredPreviewController {
 
 class FilteredPreviewControllerIOS extends FilteredPreviewController {
    
-    FilteredPreviewControllerIOS();
+  FilteredPreviewControllerIOS();
     
  
   Future<void> update(CameraImage cameraImage) async {
@@ -205,12 +201,13 @@ class FilteredPreviewControllerIOS extends FilteredPreviewController {
     try { 
 
       Uint8List data = cameraImage.planes[0].bytes;  
- 
+   
       final params = {
         'imageData': data,
+        'imageFormat':cameraImage.format.group.name,
         'width':  cameraImage.planes[0].width,
         'height': cameraImage.planes[0].height,
-        'rowstride' : cameraImage.planes[0].bytesPerRow
+        'rowStride' : cameraImage.planes[0].bytesPerRow
       };
 
       Stopwatch stopwatch  = Stopwatch()..start();
@@ -232,45 +229,6 @@ class FilteredPreviewControllerIOS extends FilteredPreviewController {
       print('Error processing camera image: $e');
     }
   }  
-
-Future<Uint8List> getDataAsPNGEncoded(Uint8List rawCameraData, int width, int height) async {
-  
-  var completer = Completer<ui.Image>();
-
-  //Uint8List data  = convertBGRA8888toRGBA8888(rawCameraData);
-
-  // Decode the camera data to an Image object
-  ui.decodeImageFromPixels(
-    rawCameraData,
-    width,
-    height,
-    ui.PixelFormat.bgra8888,
-        (ui.Image img) {
-        completer.complete(img);
-    },
-  );
-
-  ui.Image image     = await completer.future;
-  ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-  Uint8List pngBytes = byteData!.buffer.asUint8List(); 
-  return pngBytes;
-} 
-
- Uint8List convertUnmodifiableUint8ArrayViewToUint8List(Uint8List unmodifiableArray) {
-  return Uint8List.fromList(unmodifiableArray);
-}
-
-//TODO: perform in CoreImage on iOS side
-Uint8List convertBGRA8888toRGBA8888(Uint8List bgra) {
-  Uint8List rgba = convertUnmodifiableUint8ArrayViewToUint8List(bgra);
-  for (int i = 0; i < rgba.length; i += 4) {
-    // Swap the B and R channels.
-    var temp = rgba[i];
-    rgba[i] = rgba[i + 2];
-    rgba[i + 2] = temp;
-  }
-  return rgba;
-} 
-
+ 
     
 }
