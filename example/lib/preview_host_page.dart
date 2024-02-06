@@ -203,8 +203,8 @@ class _PreviewPageState  extends State<PreviewPage> {
           child: _controller == null
               ? const CircularProgressIndicator()
               : SizedBox(
-            width: width,
-            height: height,
+            width: screenSize.width,
+            height: screenSize.height,
             child:  FilteredPreview(_controller!),
           ),
         ),
