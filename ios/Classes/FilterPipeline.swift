@@ -159,7 +159,10 @@ public class FilterPipeline : NSObject {
         var outputImage:CIImage?
         
         //apply filtering
-        if (filtersEnabled){
+        if (true){
+            if let background = backgroundCIImage {
+                scaledBackgroundCIImage = transformBackgroundToFit(backgroundCIImage: background, cameraImage: ciImage)
+            }
              outputImage = applyFilters(inputImage: ciImage)
         }
         else {
@@ -167,7 +170,7 @@ public class FilterPipeline : NSObject {
         }
          
         if let outputImage {
-            let pixelBuffer = getPixelBuffer(ciImage)
+            let pixelBuffer = getPixelBuffer(outputImage)
             if let pixelBuffer,
                let flutterTextureRegistry {
                 nativeTexture?.updatePixelBuffer(with: pixelBuffer)
@@ -180,7 +183,11 @@ public class FilterPipeline : NSObject {
         var buffer: CVPixelBuffer?
         if let width = self.nativeTexture?.width,
            let height = self.nativeTexture?.height {
-            CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, nil, &buffer)
+            let properties: [String: Any] = [
+                kCVPixelBufferMetalCompatibilityKey as String: true,
+                kCVPixelBufferOpenGLCompatibilityKey as String: true
+            ]
+            CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, properties as CFDictionary, &buffer)
             if let buffer {
                 ciContext.render(ciImage, to: buffer)
             }
@@ -193,7 +200,7 @@ public class FilterPipeline : NSObject {
     }
     
     func convertToCIImage(with rawData: Data, width: Int, height: Int) -> CIImage? {
-        //BGRA8888, least significant bit hence byteOrder32Little
+        //BGRA8888 hence byteOrder32Big as most significant bit first
         let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
         
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -366,6 +373,12 @@ extension FileManager {
     
     func applicationDocumentsDirectory () -> String {
         let resultArray = NSSearchPathForDirectoriesInDomains(FileManager.SearchPathDirectory.documentDirectory ,FileManager.SearchPathDomainMask.userDomainMask, true)
+        let root = resultArray[0]
+        return "\(root)"
+    }
+    
+    func cachesDirectory () -> String {
+        let resultArray = NSSearchPathForDirectoriesInDomains(FileManager.SearchPathDirectory.cachesDirectory ,FileManager.SearchPathDomainMask.userDomainMask, true)
         let root = resultArray[0]
         return "\(root)"
     }
