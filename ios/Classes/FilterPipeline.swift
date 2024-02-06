@@ -148,9 +148,7 @@ public class FilterPipeline : NSObject {
      * Update and render  to be called on a background thread, write operations to NativeTexture.pixelbuffer to be  dispatched to the main thread
      */
     func update(_ rawBytes: Data, texture:NativeTexture) {
-       //DispatchQueue.global(qos: .background).async {
-            self.process(rawBytes, texture: texture)
-       //}
+        self.process(rawBytes, texture: texture)
     }
     
     func process(_ rawBytes: Data, texture:NativeTexture) {
@@ -200,8 +198,8 @@ public class FilterPipeline : NSObject {
     }
     
     func convertToCIImage(with rawData: Data, width: Int, height: Int) -> CIImage? {
-        //BGRA8888 hence byteOrder32Big as most significant bit first
-        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
+        //BGRA8888 with no transparency so need to skip alpha channel.
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
         
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         
