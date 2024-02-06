@@ -218,19 +218,19 @@ class FilteredPreviewControllerIOS extends FilteredPreviewController {
           'rowStride' : cameraImage.planes[0].bytesPerRow
         };
 
-       Stopwatch stopwatch  = Stopwatch()..start();
+      // Stopwatch stopwatch  = Stopwatch()..start();
       
        // call into plugin/iOS
        await _channel.invokeMapMethod<String, dynamic>('update', params); 
-       stopwatch.stop(); 
+       // stopwatch.stop(); 
     
-        time += stopwatch.elapsedMilliseconds;
-        iterations = iterations + 1;
+        // time += stopwatch.elapsedMilliseconds;
+        // iterations = iterations + 1;
 
-        if (iterations == 100){
-            print('100 updates executed in average of ${time/iterations}, time: ${time}');
-            print('seconds = ${time/1000}, fps = ${iterations/(time/1000)}');
-        }
+        // if (iterations == 100){
+        //     print('100 updates executed in average of ${time/iterations}, time: ${time}');
+        //     print('seconds = ${time/1000}, fps = ${iterations/(time/1000)}');
+        // }
 
       } catch (e) {
         print('Error processing camera image: $e');

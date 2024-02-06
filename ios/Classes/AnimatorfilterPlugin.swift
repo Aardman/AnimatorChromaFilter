@@ -100,14 +100,13 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     }
     
     func parseParams(_ arguments: NSDictionary) -> FilterParameters{
-        let result = FilterParameters()
+        var result = FilterParameters()
         if let colour = arguments["colour"]  as? [Int],
            let sensitivity = arguments["sensitivity"]  as? Float {
             let red = Float(colour[0]/255)
             let green = Float(colour[1]/255)
             let blue  = Float(colour[2]/255)
-            let result =
-            FilterParameters(
+            result = FilterParameters(
                 red:red,
                 green:green,
                 blue:blue,
