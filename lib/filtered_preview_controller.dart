@@ -3,7 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;  
 
 import 'dart:async';      
-import 'package:flutter/material.dart'; 
+import 'package:flutter/material.dart';  
     
 
 const MethodChannel _channel =  MethodChannel('animatorfilter');
@@ -15,8 +15,9 @@ abstract class FilteredPreviewController   {
     bool _isDisposed = false;
     bool _initialized = false;
 
+    //metrics
     var time = 0;
-    var iterations = 0;  
+    var iterations = 0;   
 
     //Platform specific 
     //iOS
@@ -36,7 +37,7 @@ abstract class FilteredPreviewController   {
     double get height {
       return _height;
     }
-
+  
     //Platform specific 
 
     //iOS
@@ -55,6 +56,7 @@ abstract class FilteredPreviewController   {
   //Concrete API implementations 
 
   Future<void> initialize(double width, double height) async {
+   
       if (_isDisposed) {
         throw Exception('Disposed FilterPreviewControllerAndroid');
       }
@@ -69,6 +71,12 @@ abstract class FilteredPreviewController   {
     final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
     _initialized = true;
     _textureId = reply!['textureId'];
+
+     //enable filtering
+    await _channel.invokeMethod('enableFilters');
+    //  final backgroundParams  = {'backgroundImage' : 'demo_background.jpg'};
+    //  await _channel.invokeMapMethod<String, dynamic>('setBackgroundImagePath', backgroundParams);
+
   }  
 
   //TODO Implement correct parameters passing ( colour, sensitivity, backgroundImagePath)
@@ -197,37 +205,37 @@ class FilteredPreviewControllerIOS extends FilteredPreviewController {
       print('Camera image or planes are null');
       return;
     }
+ 
+      try { 
 
-    try { 
+        Uint8List data = cameraImage.planes[0].bytes;  
+    
+        final params = {
+          'imageData': data,
+          'imageFormat':cameraImage.format.group.name,
+          'width':  cameraImage.planes[0].width,
+          'height': cameraImage.planes[0].height,
+          'rowStride' : cameraImage.planes[0].bytesPerRow
+        };
 
-      Uint8List data = cameraImage.planes[0].bytes;  
-   
-      final params = {
-        'imageData': data,
-        'imageFormat':cameraImage.format.group.name,
-        'width':  cameraImage.planes[0].width,
-        'height': cameraImage.planes[0].height,
-        'rowStride' : cameraImage.planes[0].bytesPerRow
-      };
+       Stopwatch stopwatch  = Stopwatch()..start();
+      
+       // call into plugin/iOS
+       await _channel.invokeMapMethod<String, dynamic>('update', params); 
+       stopwatch.stop(); 
+    
+        time += stopwatch.elapsedMilliseconds;
+        iterations = iterations + 1;
 
-      Stopwatch stopwatch  = Stopwatch()..start();
-     
-     //call into plugin/iOS
-      final reply = await _channel.invokeMapMethod<String, dynamic>('update', params);
-      bool result = reply!['result'];  
-      stopwatch.stop(); 
-  
-      time += stopwatch.elapsedMilliseconds;
-      iterations = iterations + 1;
+        if (iterations == 100){
+            print('100 updates executed in average of ${time/iterations}, time: ${time}');
+            print('seconds = ${time/1000}, fps = ${iterations/(time/1000)}');
+        }
 
-      if (iterations == 100){
-          print('100 updates executed in average of ${time/iterations}, time: ${time}');
-          print('seconds = ${time/1000}, fps = ${iterations/(time/1000)}');
-      }
+      } catch (e) {
+        print('Error processing camera image: $e');
+      } 
 
-    } catch (e) {
-      print('Error processing camera image: $e');
-    }
   }  
  
     
