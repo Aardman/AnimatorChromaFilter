@@ -40,6 +40,7 @@ public class FilterPipeline : NSObject {
     var chromaFilter:BlendingChromaFilter?
     public var filtersEnabled = false
     
+    private let fileSaveQueue = DispatchQueue(label: "com.aardman.imageSaveQueue")
     
     //MARK: - Initialise pipeline
     @objc
@@ -53,7 +54,6 @@ public class FilterPipeline : NSObject {
         setupCoreImage()
         self.filterParameters = filterParameters
         self.flutterTextureRegistry =  flutterTextureRegistry
-        //TODO: remove before release
         saveSampleBackgroundToDocs()
         //explicit init on initialisation, for default values
         updateChangedFilters(filterParameters)
@@ -63,8 +63,6 @@ public class FilterPipeline : NSObject {
     public func initialize(filterParameters:FilterParameters){
         setupCoreImage()
         self.filterParameters = filterParameters
-        //TODO: remove before release
-        saveSampleBackgroundToDocs()
         //explicit init on initialisation, for default values
         updateChangedFilters(filterParameters)
     }
@@ -74,16 +72,7 @@ public class FilterPipeline : NSObject {
     func setupCoreImage(){
         ciContext = CIContext()
     }
-    
-    func saveSampleBackgroundToDocs(){
-        if let backgroundImage = UIImage(named: "demo_background") {
-            FileManager.default.save(filename: "demo_background.jpg", image: backgroundImage)
-            if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                let fileURL = documentsDirectory.appendingPathComponent("demo_background.jpg")
-                updateBackground(fileURL.path)
-            }
-        }
-    }
+
     
     //MARK:  - Filter init and update
     
@@ -147,17 +136,16 @@ public class FilterPipeline : NSObject {
     /**
      * Update and render  to be called on a background thread, write operations to NativeTexture.pixelbuffer to be  dispatched to the main thread
      */
+   
     func update(_ rawBytes: Data, texture:NativeTexture) {
-        self.process(rawBytes, texture: texture)
-    }
-    
-    func process(_ rawBytes: Data, texture:NativeTexture) {
+        
+        //convert raw data to CoreImage
         guard let ciImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height) else { print("❌ failed to convert input image"); return}
         
         var outputImage:CIImage?
         
         //apply filtering
-        if (true){
+        if (filtersEnabled){
             if let background = backgroundCIImage {
                 scaledBackgroundCIImage = transformBackgroundToFit(backgroundCIImage: background, cameraImage: ciImage)
             }
@@ -231,7 +219,6 @@ public class FilterPipeline : NSObject {
     //MARK: - Objc API used in modified fork of Camera Plugin
     
     @objc
-    //No need to lock pixel buffer currently
     public func filter(_ buffer:CVPixelBuffer?) {
         guard let buf = buffer else { return  }
         let outputImage = CIImage(cvPixelBuffer: buf, options:[:])
@@ -321,7 +308,6 @@ public class FilterPipeline : NSObject {
         return scaleFilter.outputImage
     }
     
-    
     //Scale to fit the height
     //We will allow the background to misalign with the center at this point. We may need
     //a CIAffineTransform step for that if width input <> output.
@@ -397,3 +383,17 @@ extension FileManager {
     
 }
 
+//Useful debugging tools
+extension FilterPipeline  {
+    
+    func saveSampleBackgroundToDocs(){
+        if let backgroundImage = UIImage(named: "demo_background") {
+            FileManager.default.save(filename: "demo_background.jpg", image: backgroundImage)
+            if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let fileURL = documentsDirectory.appendingPathComponent("demo_background.jpg")
+                updateBackground(fileURL.path)
+            }
+        }
+    }
+    
+}
