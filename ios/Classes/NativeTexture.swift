@@ -32,13 +32,8 @@ class NativeTexture: NSObject, FlutterTexture {
    }
 
    func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
-       var pixelBuffer: CVPixelBuffer?
-       pixelBufferQueue.sync {
-           pixelBuffer = self.latestPixelBuffer
-           self.latestPixelBuffer = nil
-       }
-       if let pixelBuffer {
-           return Unmanaged.passRetained(pixelBuffer)
+       if let latestPixelBuffer {
+           return Unmanaged.passRetained(latestPixelBuffer)
        }
        else {
            return nil
