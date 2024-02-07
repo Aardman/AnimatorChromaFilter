@@ -142,21 +142,8 @@ class _PreviewPageState  extends State<PreviewPage> {
 
   //Will be called on each image returned from the camera
   //Framerate
-  void _processCameraImage(CameraImage image) async {
-    int Framerate = 60;
-
-    if (!mounted || DateTime
-        .now()
-        .millisecondsSinceEpoch - _lastRun < Framerate) {
-      return;
-    }
-
-    await _controller?.update(image);
-
-
-    _lastRun = DateTime
-        .now()
-        .millisecondsSinceEpoch;
+  void _processCameraImage(CameraImage image) async { 
+    await _controller?.update(image); 
   }
 
   initPreviewController(double width, double height) async {
