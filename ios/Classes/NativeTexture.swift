@@ -21,8 +21,8 @@ class NativeTexture: NSObject, FlutterTexture {
         self.height = height
         super.init()
         self.textureId = registry.register(self)
-        //create the initial pixel buffer
-        CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, nil, &latestPixelBuffer)
+        //create an initial pixel buffer
+       // CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, nil, &latestPixelBuffer)
     }
  
     func updatePixelBuffer(with newPixelBuffer: CVPixelBuffer) {

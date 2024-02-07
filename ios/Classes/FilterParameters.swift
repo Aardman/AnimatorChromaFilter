@@ -11,13 +11,6 @@ import CoreGraphics
 typealias HueRange   = (Double, Double)
 typealias MaskBounds = Array<CGPoint>
 
-enum FilterParamNames: String {
-    case backgroundPath
-    case colour
-    case sensitivity
-    case hueRange
-    case polygon
-}
 
 @objc
 public class FilterParameters: NSObject {
@@ -25,6 +18,7 @@ public class FilterParameters: NSObject {
     var backgroundImage:String?
     var maskColor:(Float, Float, Float)?
     var threshold:Float?
+    var smoothing:Float?
     var maskBounds:MaskBounds?
 
     @objc
@@ -37,6 +31,7 @@ public class FilterParameters: NSObject {
     public init(backgroundImage:String = "",
                 red:Float = 0.0, green:Float = 1.0, blue:Float = 0.0,
                 threshold:Float = 0.4,
+                smoothing:Float = 0.3,
                 maskVertex1: CGPoint = CGPointZero,
                 maskVertex2: CGPoint = CGPointZero,
                 maskVertex3: CGPoint = CGPointZero,
@@ -45,23 +40,27 @@ public class FilterParameters: NSObject {
         self.backgroundImage = backgroundImage
         self.maskBounds = [maskVertex1, maskVertex2, maskVertex3, maskVertex4]
         self.threshold = threshold
+        self.smoothing = smoothing
     }
     
    @objc
    public init(dictionary: Dictionary<String,AnyObject>){
-        if let filename = dictionary[FilterParamNames.backgroundPath.rawValue] as? String {
+        if let filename = dictionary[ParamNames.backgroundPath.rawValue] as? String {
             backgroundImage = filename
         }
-       if let colours = dictionary[FilterParamNames.colour.rawValue] as? [NSNumber],
+       if let colours = dictionary[ParamNames.colour.rawValue] as? [NSNumber],
           let red     = colours[0] as? Float,
           let green   = colours[1] as? Float,
           let blue    = colours[2] as? Float {
           self.maskColor = (red/255.0, green/255.0, blue/255.0)
         }
-       if let sensitivity = dictionary[FilterParamNames.sensitivity.rawValue] as? NSNumber {
+       if let sensitivity = dictionary[ParamNames.sensitivity.rawValue] as? NSNumber {
            self.threshold = sensitivity.floatValue
        }
-       if let vectorBounds = dictionary[FilterParamNames.polygon.rawValue] as? [[NSNumber]],
+       if let smoothing = dictionary[ParamNames.smoothing.rawValue] as? NSNumber {
+           self.smoothing = smoothing.floatValue
+       }
+       if let vectorBounds = dictionary[ParamNames.polygon.rawValue] as? [[NSNumber]],
           let point1 = CGPoint(polygonPoint:vectorBounds[0]),
           let point2 = CGPoint(polygonPoint:vectorBounds[1]),
           let point3 = CGPoint(polygonPoint:vectorBounds[2]),

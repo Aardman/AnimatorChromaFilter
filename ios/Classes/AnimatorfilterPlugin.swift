@@ -46,8 +46,8 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     func handleCreate(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         
         guard let arguments = call.arguments as? NSDictionary,
-              let w = arguments["width"] as? Int,
-              let h = arguments["height"] as? Int else { result(["textureId", -1]);  return}
+              let w = arguments[ParamNames.width.rawValue] as? Int,
+              let h = arguments[ParamNames.width.rawValue] as? Int else { result(["textureId", -1]);  return}
         
         AnimatorfilterPlugin.instance?.createNativeTexture(width: w, height: h)
         
@@ -61,7 +61,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     //return true if successful
     func handleSetBackgroundImagePath(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         if let arguments = call.arguments as? NSDictionary,
-           let imgPath = arguments["imgPath"]  as? String {
+           let imgPath = arguments[ParamNames.imgPath.rawValue]  as? String {
             AnimatorfilterPlugin.instance?.pipeline?.setBackgroundImageFrom(path: imgPath)
             let data:[String: Any] = ["result": true]
             result(data);
@@ -74,7 +74,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     //just write the input bgra8888 image data to the native texture to display in widget
     func handleUpdate(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         if let arguments = call.arguments as? NSDictionary,
-           let flutterData = arguments["imageData"] as? FlutterStandardTypedData,
+           let flutterData = arguments[ParamNames.imageData.rawValue] as? FlutterStandardTypedData,
            let texture = AnimatorfilterPlugin.instance?.nativeTexture {
             let rawImageData = flutterData.data as NSData
             AnimatorfilterPlugin.instance?.pipeline?.update(rawImageData as Data, texture:texture)
@@ -93,16 +93,17 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
             result( ["result": true]);
         }
         else{
-            result(["result", "false"])
+            result(["result", false])
         }
-        let data:[String: Any] = ["result": "true"]
+        let data:[String: Any] = ["result": false]
         result(data);
     }
     
     func parseParams(_ arguments: NSDictionary) -> FilterParameters{
         var result = FilterParameters()
-        if let colour = arguments["colour"]  as? [Int],
-           let sensitivity = arguments["sensitivity"]  as? Float {
+        if let colour = arguments[ParamNames.colour.rawValue]  as? [Int],
+            let sensitivity = arguments[ParamNames.sensitivity.rawValue]  as? Float,
+            let smoothing = arguments[ParamNames.smoothing.rawValue]  as? Float {
             let red = Float(colour[0]/255)
             let green = Float(colour[1]/255)
             let blue  = Float(colour[2]/255)
@@ -110,11 +111,12 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
                 red:red,
                 green:green,
                 blue:blue,
-                threshold: sensitivity
+                threshold: sensitivity,
+                smoothing: smoothing
             )
         }
         return result
-    }
+    } 
     
     func handleEnable(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         AnimatorfilterPlugin.instance?.pipeline?.filtersEnabled = true

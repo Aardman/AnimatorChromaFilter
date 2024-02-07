@@ -100,8 +100,13 @@ public class FilterPipeline : NSObject {
             threshold = t
         }
         
+        var smoothing = filterParameters?.smoothing
+        if let s = newParams.smoothing {
+            smoothing = s
+        }
+        
         //gather changes to colour and threshold
-        updateCustomChromaFilter(colour, threshold)
+        updateCustomChromaFilter(colour, threshold, smoothing)
     }
     
     func  updateBackground(_ path: String){
@@ -111,17 +116,20 @@ public class FilterPipeline : NSObject {
         }
     }
     
-    func updateCustomChromaFilter(_ colour: (Float, Float, Float)?, _ threshold:Float?){
+    func updateCustomChromaFilter(_ colour: (Float, Float, Float)?, _ threshold:Float?, _ smoothing:Float?){
         if self.chromaFilter == nil {
             chromaFilter = BlendingChromaFilter()
         }
-        if let colour = colour {
+        if let colour {
             self.chromaFilter?.red   = colour.0
             self.chromaFilter?.green = colour.1
             self.chromaFilter?.blue  = colour.2
         }
-        if let threshold = threshold {
+        if let threshold {
             self.chromaFilter?.threshold = threshold
+        }
+        if let smoothing {
+            self.chromaFilter?.smoothing = smoothing
         }
         ///needed so that kernel data can be found  when  loaded
         BlendingChromaFilter.myBundle = Bundle(for: type(of: self))
@@ -146,8 +154,8 @@ public class FilterPipeline : NSObject {
         
         //apply filtering
         if (filtersEnabled){
-            if let background = backgroundCIImage {
-                scaledBackgroundCIImage = transformBackgroundToFit(backgroundCIImage: background, cameraImage: ciImage)
+            if let backgroundCIImage {
+                scaledBackgroundCIImage = transformBackgroundToFit(backgroundCIImage: backgroundCIImage, cameraImage: ciImage)
             }
              outputImage = applyFilters(inputImage: ciImage)
         }
@@ -228,7 +236,6 @@ public class FilterPipeline : NSObject {
         guard let filtered = applyFilters(inputImage: outputImage) else { return }
         ciContext.render(filtered, to: buf)
     }
-    
     
     @objc
     @available(iOS 11.0, *)
