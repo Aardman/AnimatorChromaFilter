@@ -5,10 +5,17 @@ import 'package:camera/camera.dart';
 import 'package:animatorfilter/filtered_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:animatorfilter/filtered_preview_controller.dart'; 
+import 'package:animatorfilter/filtered_preview_controller_ios.dart';
+import 'package:animatorfilter/filtered_preview_controller_android.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+
+/**
+ * This is an example hosting page for the FilteredPreview widget 
+ * and should be replaced by the application client hosting widget
+ */
 class PreviewPage  extends StatefulWidget  {
   const PreviewPage({Key? key}) : super(key: key);
 
@@ -43,13 +50,23 @@ class _PreviewPageState  extends State<PreviewPage> {
   dispose() async {
     super.dispose();
     await _controller?.dispose();
+  } 
+
+  setTextureSize(){   
+    if( _camController!.value.deviceOrientation.name == "portraitUp" || _camController!.value.deviceOrientation.name == "portraitDown"){ 
+      _textureHeight =  _camController!.value.previewSize!.flipped.height  ;
+      _textureWidth  =  _camController!.value.previewSize!.flipped.width   ; 
+    }
+    else {
+      _textureHeight =  _camController!.value.previewSize!.height  ;
+      _textureWidth  =  _camController!.value.previewSize!.width   ; 
+    }
   }
 
   init() async {
     await initCamera();
-    //TODO remove hard coded values
-    _textureHeight =  1280; // _camController!.value.previewSize!.height;
-    _textureWidth =   720; //_camController!.value.previewSize!.width;
+    
+    setTextureSize();
     await initPreviewController(_textureWidth, _textureHeight);
     await startImageStream();
 
@@ -137,8 +154,7 @@ class _PreviewPageState  extends State<PreviewPage> {
     } catch (e) {
       log("Error initializing camera, error: ${e.toString()}");
     }
-  }
-
+  } 
 
   //Will be called on each image returned from the camera
   //Framerate

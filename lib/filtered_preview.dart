@@ -1,11 +1,10 @@
 import 'package:flutter/widgets.dart';
-import 'filtered_preview_controller.dart'; 
-import 'package:flutter/foundation.dart';  
+import 'filtered_preview_controller.dart';  
 import 'package:flutter/material.dart';
 
 
 class FilteredPreview extends StatelessWidget {
-  const FilteredPreview(this.controller, {Key? key}) : super(key: key);
+  const FilteredPreview(this.controller, {super.key});
   final FilteredPreviewController controller; 
 
   @override

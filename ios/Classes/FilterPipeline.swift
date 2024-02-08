@@ -40,8 +40,6 @@ public class FilterPipeline : NSObject {
     var chromaFilter:BlendingChromaFilter?
     public var filtersEnabled = false
     
-    private let fileSaveQueue = DispatchQueue(label: "com.aardman.imageSaveQueue")
-    
     //MARK: - Initialise pipeline
     @objc
     public override init(){
@@ -54,8 +52,9 @@ public class FilterPipeline : NSObject {
         setupCoreImage()
         self.filterParameters = filterParameters
         self.flutterTextureRegistry =  flutterTextureRegistry
+        #if DEBUG
         saveSampleBackgroundToDocs()
-        //explicit init on initialisation, for default values
+        #endif
         updateChangedFilters(filterParameters)
     }
     
@@ -63,7 +62,6 @@ public class FilterPipeline : NSObject {
     public func initialize(filterParameters:FilterParameters){
         setupCoreImage()
         self.filterParameters = filterParameters
-        //explicit init on initialisation, for default values
         updateChangedFilters(filterParameters)
     }
     
@@ -110,7 +108,6 @@ public class FilterPipeline : NSObject {
     }
     
     func  updateBackground(_ path: String){
-        print("🌆 Background Updated \(path)")
         if let backgroundImage = UIImage(contentsOfFile:  path) {
             backgroundCIImage = CIImage(image: backgroundImage)
         }
@@ -136,7 +133,9 @@ public class FilterPipeline : NSObject {
     }
     
     func updateMaskBounds(_ bounds:MaskBounds){
+        #if DEBUG
         print("🍎 Mask Bounds Updated \(bounds)")
+        #endif
     }
     
     //MARK: - New API for revised processing from input raw image data - no @objc required
@@ -146,9 +145,29 @@ public class FilterPipeline : NSObject {
      */
    
     func update(_ rawBytes: Data, texture:NativeTexture) {
-        
+        if let outputImage = getProcessedImage(from: rawBytes, texture: texture) {
+            let pixelBuffer = getPixelBuffer(outputImage)
+            if let pixelBuffer,
+               let flutterTextureRegistry {
+                nativeTexture?.updatePixelBuffer(with: pixelBuffer)
+                nativeTexture?.textureFrameAvailable(registry: flutterTextureRegistry)
+            }
+        }
+    }
+    
+    func processStillFrame(_ rawBytes: Data, texture:NativeTexture) -> Data? {
+        if let outputImage = getProcessedImage(from: rawBytes, texture: texture) {
+            let processedBytes:Data? = CIImage.getAsJPEGData(outputImage)
+            return processedBytes
+        }
+        else {
+            return nil
+        }
+    }
+     
+    func getProcessedImage(from rawBytes:Data, texture:NativeTexture)  -> CIImage? {
         //convert raw data to CoreImage
-        guard let ciImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height) else { print("❌ failed to convert input image"); return}
+        guard let ciImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height) else { print("❌ failed to convert input image"); return nil}
         
         var outputImage:CIImage?
         
@@ -162,16 +181,9 @@ public class FilterPipeline : NSObject {
         else {
             outputImage = ciImage
         }
-         
-        if let outputImage {
-            let pixelBuffer = getPixelBuffer(outputImage)
-            if let pixelBuffer,
-               let flutterTextureRegistry {
-                nativeTexture?.updatePixelBuffer(with: pixelBuffer)
-                nativeTexture?.textureFrameAvailable(registry: flutterTextureRegistry)
-            }
-        }
-    } 
+        
+        return outputImage
+    }
      
     func getPixelBuffer(_ ciImage:CIImage) -> CVPixelBuffer? {
         var buffer: CVPixelBuffer?
@@ -264,7 +276,6 @@ public class FilterPipeline : NSObject {
         return data as NSData?
     }
     
-    
     //MARK: - Apply filtering
     
     /// Filters and transforms for the input image which must be correctly rotated
@@ -289,7 +300,6 @@ public class FilterPipeline : NSObject {
         
         return chromaBlendedImage
     }
-    
     
     //MARK: - Background formatting
     
@@ -355,9 +365,20 @@ public class FilterPipeline : NSObject {
 //MARK: - Helper extensions
 
 extension CIImage {
+    
     func getSize() -> CGSize {
         return CGSize(width: extent.width, height:extent.height)
     }
+    
+    static func getAsJPEGData(_ image: CIImage) -> Data? {
+        let context = CIContext(options: nil)
+        guard let cgImage = context.createCGImage(image, from: image.extent) else {
+            return nil
+        }
+        let uiImage = UIImage(cgImage: cgImage)
+        return uiImage.jpegData(compressionQuality: 1.0)
+    }
+    
 }
 
 extension FileManager {
@@ -390,7 +411,7 @@ extension FileManager {
     
 }
 
-//Useful debugging tools
+#if DEBUG
 extension FilterPipeline  {
     
     func saveSampleBackgroundToDocs(){
@@ -404,3 +425,4 @@ extension FilterPipeline  {
     }
     
 }
+#endif

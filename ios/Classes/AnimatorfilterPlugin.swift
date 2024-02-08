@@ -31,6 +31,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         case "initialise":handleCreate(call, result:result)
         case "setBackgroundImagePath":handleSetBackgroundImagePath(call, result:result)
         case "update":handleUpdate(call, result:result)
+        case "processStillFrame":handleProcessStillFrame(call, result:result)
         case "updateParameters":handleUpdateParameters(call, result:result)
         case "enableFilters":handleEnable(call, result:result)
         case "disableFilters":handleDisable(call, result:result)
@@ -47,7 +48,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         
         guard let arguments = call.arguments as? NSDictionary,
               let w = arguments[ParamNames.width.rawValue] as? Int,
-              let h = arguments[ParamNames.width.rawValue] as? Int else { result(["textureId", -1]);  return}
+              let h = arguments[ParamNames.height.rawValue] as? Int else { result(["textureId", -1]);  return}
         
         AnimatorfilterPlugin.instance?.createNativeTexture(width: w, height: h)
         
@@ -61,7 +62,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     //return true if successful
     func handleSetBackgroundImagePath(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         if let arguments = call.arguments as? NSDictionary,
-           let imgPath = arguments[ParamNames.imgPath.rawValue]  as? String {
+           let imgPath = arguments[ParamNames.backgroundPath.rawValue]  as? String {
             AnimatorfilterPlugin.instance?.pipeline?.setBackgroundImageFrom(path: imgPath)
             let data:[String: Any] = ["result": true]
             result(data);
@@ -79,6 +80,20 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
             let rawImageData = flutterData.data as NSData
             AnimatorfilterPlugin.instance?.pipeline?.update(rawImageData as Data, texture:texture)
             result(["result": true]);
+        }
+        else{
+            result(["error", false])
+        }
+    }
+    
+    //take a bgra8888 image capture and return filtered version as JPEG data
+    func handleProcessStillFrame(_ call: FlutterMethodCall, result: @escaping FlutterResult){
+        if let arguments = call.arguments as? NSDictionary,
+           let flutterData = arguments[ParamNames.imageData.rawValue] as? FlutterStandardTypedData,
+           let texture = AnimatorfilterPlugin.instance?.nativeTexture {
+            let rawImageData = flutterData.data as NSData
+            let processedImageData = AnimatorfilterPlugin.instance?.pipeline?.processStillFrame(rawImageData as Data, texture:texture)
+            result(["result": processedImageData]);
         }
         else{
             result(["error", false])
