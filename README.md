@@ -8,13 +8,11 @@ This plug-in currently supports iOS platforms, but not Android.
 
 The example folder contains a simple app that will display the camera preview with chromakey filtering enabled to show a demo background image where the chromakey colour is present in the input images.
 
-##Example Application 
+## Example Application 
 
 The example app features a demonstration of the filter plugin, in a real app this will be provided by the hosting application. 
 
-The **PreviewPage** Widget encapsulates the setting up and display of the camera preview in the main class. 
-
-This code is not intended as production code, but as a guide to basic setup and control of the filter plugin
+The  **PreviewPage** Widget encapsulates the setting up and display of the camera preview in the main class. The code in **PreviewPage**  is not intended as production code, but as a guide to basic setup and control of the filter plugin
 
 ## Usage
 
@@ -58,7 +56,7 @@ To set parameters or to update them, use the updateFilters method of **FilterPre
 The params argument is structured as follows with a key-value pairing method to minimize API complexity.
 
     { 
-     'colour', [int, int, int], flutter 
+     'colour', [int, int, int],
      'threshold', float,
      'smoothing', float
     }
@@ -103,7 +101,7 @@ To display images in the preview call
 This will expect that the size of the image data in CameraImage is identical to that provided in the arguments to **initialize**
 
 
-##Processing stills 
+## Processing stills 
 
 This expects images in the same formats as for update,  in this case this method should be called to return image data that has been filtered. The returned data will be in JPEG encoded format for easier use as it can simply be saved to a file or used for further display or processing. 
 
