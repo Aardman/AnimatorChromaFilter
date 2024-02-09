@@ -57,11 +57,11 @@ To set parameters or to update them, use the updateFilters method of **FilterPre
 	
 The params argument is structured as follows with a key-value pairing method to minimize API complexity.
 
- 		{ 
-     		'colour', [int, int, int], flutter 
-     		'threshold', float,
-      		'smoothing', float
-      }
+    { 
+     'colour', [int, int, int], flutter 
+     'threshold', float,
+     'smoothing', float
+    }
    
   R, G, B values need to be suppliled as an int[2] array with values ranging from 0 - 255
 
