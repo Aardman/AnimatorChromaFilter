@@ -7,7 +7,6 @@
 
 import Foundation
 import Flutter
- 
 
 class NativeTexture: NSObject, FlutterTexture {
     var textureId: Int64?
@@ -21,8 +20,6 @@ class NativeTexture: NSObject, FlutterTexture {
         self.height = height
         super.init()
         self.textureId = registry.register(self)
-        //create an initial pixel buffer
-       // CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, nil, &latestPixelBuffer)
     }
  
     func updatePixelBuffer(with newPixelBuffer: CVPixelBuffer) {

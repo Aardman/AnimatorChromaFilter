@@ -32,7 +32,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         case "setBackgroundImagePath":handleSetBackgroundImagePath(call, result:result)
         case "update":handleUpdate(call, result:result)
         case "processStillFrame":handleProcessStillFrame(call, result:result)
-        case "updateParameters":handleUpdateParameters(call, result:result)
+        case "updateFilters":handleUpdateParameters(call, result:result)
         case "enableFilters":handleEnable(call, result:result)
         case "disableFilters":handleDisable(call, result:result)
         case "dispose":handleDispose(call, result: result)
