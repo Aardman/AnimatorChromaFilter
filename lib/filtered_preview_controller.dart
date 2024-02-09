@@ -32,12 +32,15 @@ abstract class FilteredPreviewController   {
    ///filter the cameraImage and return JPEG encoded bytes
    Future<Uint8List> processStillFrame(CameraImage cameraImage);
  
+
   //Concrete API implementations 
 
   /// This needs to be called before calls to update(cameraImage)
   /// 
   /// width and height must correspond to the current camera frame size and aspect ratio
   /// as these are used to create GPU textures
+  /// 
+  /// This should also be called on orientation changes to reset the texture
   Future<void> initialize(double width, double height) async {
    
       if (_isDisposed) {
@@ -48,18 +51,15 @@ abstract class FilteredPreviewController   {
       _width = width;
       _height = height;
 
-    // Initialize the filter on the native platform
-    //final params = {'img': bytes.buffer.asUint8List(0), 'width': width, 'height': height};
+    // Initialize the texture on the native platform 
     final params = {'width': width, 'height': height};
     final reply = await _channel.invokeMapMethod<String, dynamic>('create', params); 
     _initialized = true;
-    _textureId = reply!['textureId'];
-
-     //enable filtering
-    await _channel.invokeMethod('enableFilters');
+    _textureId = reply!['textureId']; 
   
   }   
-   
+ 
+    
   /// 
   /// @params - Parameter list as an object with the following types
   /// 
@@ -98,7 +98,33 @@ abstract class FilteredPreviewController   {
       print('Error processing camera image: $e');
     }
   }
-  
+   
+ /// Start filtering images
+  Future<void> enableFilters() async {
+    if (!_initialized) {
+      throw Exception('FilterController not initialized');
+    }
+
+    try { 
+        await _channel.invokeMethod('enableFilters', {});
+    } catch (e) {
+      print('Error enabling filters: $e');
+    }
+  }
+
+   /// Stop filtering images
+  Future<void> disableFilters() async {
+    if (!_initialized) {
+      throw Exception('FilterController not initialized');
+    }
+
+    try { 
+        await _channel.invokeMethod('disableFilters', {});
+    } catch (e) {
+      print('Error enabling filters: $e');
+    }
+  } 
+ 
     //Common Lifecycle 
     Future<void> dispose() async {
     if (_isDisposed) {

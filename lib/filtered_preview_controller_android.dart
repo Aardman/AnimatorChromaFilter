@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:animatorfilter/filtered_preview_controller.dart';   
 
 
-//Implementations of platform specific initialisation and image update
+///Implementations of platform specific initialisation and image update
 class FilteredPreviewControllerAndroid extends FilteredPreviewController {
    
     FilteredPreviewControllerAndroid(); 
@@ -40,11 +40,12 @@ class FilteredPreviewControllerAndroid extends FilteredPreviewController {
       await FilteredPreviewController.channel.invokeMethod('update', params);
 
     } catch (e) {
-      print('Error processing camera image: $e');
+         print('Error processing camera image: $e');
     }
   }
 
   //TODO: If required by application
+  @override
    Future<Uint8List> processStillFrame(CameraImage cameraImage) {
     return Future.value(Uint8List(0));
    } 

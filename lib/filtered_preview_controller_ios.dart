@@ -34,7 +34,8 @@ class FilteredPreviewControllerIOS extends FilteredPreviewController {
 
   }  
 
-   //TODO: If required by application
+   //TODO: If required by application 
+  @override
    Future<Uint8List> processStillFrame(CameraImage cameraImage) async {  
     return Future.value(Uint8List(0));
    }  
