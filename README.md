@@ -28,9 +28,12 @@ This takes a **FilterPreviewController** as a constructor argument, this handles
 
 **FilterPreviewController** is an abstract class implemented by a platform specific class such as 
 
-**FilterPreviewControllerIOS** Implemented
+|   Subclass |  Status | 
+| ------------- | ------------- |
+| **FilterPreviewControllerIOS**   | Implemented  |
+| **FilterPreviewControllerAndroid** | Not currently implemented  |
 
-**FilterPreviewControllerAndroid** Not currently implemented
+
 
 **FilterPreviewController** provides common functions to all platform controllers and defines two abstract methods update and processStillFrame that need to be implemented in a concrete platform specific subclass such as **FilterPreviewControllerIOS**
 
@@ -43,16 +46,6 @@ The following sequence of calls are required to use **FilterPreviewController**
 The initialize method must be supplied by the width and height that are the size of the images being captured. This method calls the native code to provide a textureId (integer) that reflects the native component that will be linked to the **FlutterTexture** widget that is hosted by **FilteredPreview**
 
 This method must be called every time the device has a format change, eg: when it is rotated from portrait to landscape. This will reconstruct the native framebuffer linked to the **FlutterTexture** that is used by the **Texture** widget so that the correct image formatting will happen.
-
-###Setting the image for chromakeying 
-
-The following **FilterPreviewController** method is used to set the background image 
-
-	Future<void> setBackgroundImagePath(String backgroundImagePath) async
-	
-The background image will be revealed in areas that match the colour parameter to be set (see Setting and Updating parameters)
-
-The background image would ideally be identical in size and orientation as the images to be processed by the camera, however in the iOS platform implementation any image which is incorrectly sized will be scaled and cropped automatically to fit the texture that is used in processing.
 
 ###Setting and updating parameters
 
@@ -71,6 +64,18 @@ The params argument is structured as follows with a key-value pairing method to 
       }
    
   R, G, B values need to be suppliled as an int[2] array with values ranging from 0 - 255
+
+
+###Setting the image for chromakeying 
+
+The following **FilterPreviewController** method is used to set the background image 
+
+	Future<void> setBackgroundImagePath(String backgroundImagePath) async
+	
+The background image will be revealed in areas that match the colour parameter to be set (see Setting and Updating parameters)
+
+The background image would ideally be identical in size and orientation as the images to be processed by the camera, however in the iOS platform implementation any image which is incorrectly sized will be scaled and cropped automatically to fit the texture that is used in processing.
+
   
 ## Enabling and disabling filtering 
 
@@ -85,8 +90,11 @@ Filtering can be turned on and off using the following methods
 
 Images from the Flutter camera plugin should be provided in the following formats 
 
-iOS - BGRA888
-Android - YUV420 (not currently implemented)
+|  Platform |  Format | 
+| ------------- | ------------- |
+| iOS  | BGRA8888 (skip alpha, little endian)  |
+| Android |  YUV420 (not currently implemented) |
+ 
 
 To display images in the preview call
 
