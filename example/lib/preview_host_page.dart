@@ -12,10 +12,10 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 
-/**
- * This is an example hosting page for the FilteredPreview widget 
- * and should be replaced by the application client hosting widget
- */
+///
+/// This is an example hosting page for the FilteredPreview widget 
+/// and should be replaced by the application client hosting widget
+///
 class PreviewPage  extends StatefulWidget  {
   const PreviewPage({Key? key}) : super(key: key);
 
@@ -26,17 +26,12 @@ class PreviewPage  extends StatefulWidget  {
 
 class _PreviewPageState  extends State<PreviewPage> {
 
-  CameraController? _camController;
-  int _camFrameRotation = 0;
-  double _camFrameToScreenScale = 0;
-  int _lastRun = 0;
+  int _camFrameRotation = 0; 
 
-  double _radius = 0;
-
+  CameraController? _camController; 
   FilteredPreviewController? _controller;
 
-  //Desired Preview Size 
-  //TODO (2)
+  //Desired Preview Size  
   double _textureWidth = -1;
   double _textureHeight = -1;
 
@@ -52,6 +47,7 @@ class _PreviewPageState  extends State<PreviewPage> {
     await _controller?.dispose();
   } 
 
+  //TODO: Make this more robust for Android, check deviceOrientation names 
   setTextureSize(){   
     if( _camController!.value.deviceOrientation.name == "portraitUp" || _camController!.value.deviceOrientation.name == "portraitDown"){ 
       _textureHeight =  _camController!.value.previewSize!.flipped.height  ;
@@ -64,14 +60,11 @@ class _PreviewPageState  extends State<PreviewPage> {
   }
 
   init() async {
-    await initCamera();
-    
+    await initCamera(); 
     setTextureSize();
     await initPreviewController(_textureWidth, _textureHeight);
-    await startImageStream();
-
-    ///TODO: Static image setup for demo
-    await setImages();
+    await startImageStream(); 
+    await _controller?.
   }
 
   //Demo image setup
@@ -79,10 +72,8 @@ class _PreviewPageState  extends State<PreviewPage> {
     try {
       File backgroundFile = await getImageFileFromAssets(
           "assets/backgrounds/bkgd_01.jpg");
-      String? fullPath = backgroundFile.path;
-      if (fullPath != null) {
-        await _controller?.setBackgroundImagePath(fullPath);
-      }
+      String? fullPath = backgroundFile.path; 
+      await _controller?.setBackgroundImagePath(fullPath); 
     } catch (e) {
       log("Error setting background image, error: ${e.toString()}");
     }
@@ -98,6 +89,7 @@ class _PreviewPageState  extends State<PreviewPage> {
         buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
   }
 
+  //Example method, depends on hosting app to supply these values
   Future<void> setFilterParameters() async {
     // var colours = sampleToggle ? [0.0, 255.0, 0.0] : [0.0, 0.0, 255.0];
     //
@@ -216,23 +208,3 @@ class _PreviewPageState  extends State<PreviewPage> {
   }
 
 }
-
- //This version sets a single value for the imageInfo from a file
-  //  Future<void> initImageInfoFromFile() async {
-  //    const imageProvider = AssetImage('assets/drawable/image.jpg');
-  //    var stream = imageProvider.resolve(ImageConfiguration.empty);
-      
-  //    //init  promise  to  fulfil when image is  loaded  
-  //    final Completer<ImageInfo> completer = Completer<ImageInfo>();
-  //    var  listener =  ImageStreamListener((ImageInfo  info, bool _) {
-  //      completer.complete(info);
-  //    });
-     
-  //    stream.addListener(listener);
-     
-  //    final imageInfo  = await  completer.future; 
-     
-  //    await initPreviewController(imageInfo);
-     
-  //    stream.removeListener(listener);
-  //  }
