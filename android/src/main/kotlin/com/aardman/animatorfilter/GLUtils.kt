@@ -61,7 +61,7 @@
 
 			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, newFrameBuffer)
 
-			//load the working texture to the framebuffer
+			//load the texture to the framebuffer for use as a rendering target
 			GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, texture, 0)
 
 			// Check if the framebuffer is complete
@@ -127,7 +127,7 @@
 			GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST)
 			GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST)
 
-			// Initialize the texture with no data.
+			// Initialize the texture with no data to set mip level
 			val mipLevel = 0 // the largest mip
 			val border = 0
 			GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, mipLevel, internalFormat, width, height, border, format, type, null)
@@ -234,6 +234,9 @@
 			val frameBuffer = IntArray(1)
 			GLES30.glGenFramebuffers(1, frameBuffer, 0)
 			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, frameBuffer[0])
+
+			GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+			GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureId)
 			GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, textureId, 0)
 
 			// Check for framebuffer completeness
