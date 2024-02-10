@@ -63,8 +63,7 @@ class _PreviewPageState  extends State<PreviewPage> {
     await initCamera(); 
     setTextureSize();
     await initPreviewController(_textureWidth, _textureHeight);
-    await startImageStream(); 
-    await _controller?.
+    await startImageStream();
   }
 
   //Demo image setup
