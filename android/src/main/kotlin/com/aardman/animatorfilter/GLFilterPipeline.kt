@@ -1,6 +1,8 @@
 package com.aardman.animatorfilter
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.opengl.EGL14
 import android.opengl.EGLConfig
 import android.opengl.EGLExt
@@ -151,9 +153,11 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		setupTextures()
 		setupFramebuffers()
 
+		//setBackgroundDemo()
+
 		//Setup methods, mostly only load programs and identify uniforms for processing
-		setupConverter()
-		setupFilter()
+		//setupConverter()
+		//setupFilter()
 		setupDisplayShader()
 		setupTestQuadShader()
 	}
@@ -171,10 +175,10 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		//Monochrome textures, this uses 8 bit signed raw data from a byte array but will be interpreted correctly despite being signed from a ByteArray
 		srcYTexture    = GLUtils.createTexture(textureWidth, textureHeight, GLES30.GL_R8, GL_RED, GL_UNSIGNED_BYTE )
 
-		//TODO: It is incorrect to / dimensions by 2 as the textures will be too small  to accomodate the required data
+		//TODO: Make these the correct size
 		//Instead make the U and  V textures  the  same  size  as the  Y texture, then fill a subset of the texture based on
 		//the aspect ratio of  the input
-		srcUTexture    = GLUtils.createTexture(textureWidth , textureHeight, GLES30.GL_R8, GL_RED, GL_UNSIGNED_BYTE )
+		srcUTexture    = GLUtils.createTexture(textureWidth, textureHeight, GLES30.GL_R8, GL_RED, GL_UNSIGNED_BYTE )
 		srcVTexture    = GLUtils.createTexture(textureWidth, textureHeight, GLES30.GL_R8, GL_RED, GL_UNSIGNED_BYTE )
 	}
 
@@ -259,7 +263,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	private fun setupDisplayShader() {
      	this.displayProgram  = setupShaderProgram(VertexShaderSource, displayShader)
-
 		// Save uniform names for later use
 		this.uniforms["workingTexture"] = GLES30.glGetUniformLocation(this.displayProgram, "workingTexture")
    }
@@ -345,7 +348,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		// Bind workingTexture2 from FBO2 to a texture unit and set the corresponding uniform in the shader
 		GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture2)
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, workingTexture1)
 		GLUtils.checkEglError("Bind FBO texture")
 		GLES30.glUniform1i(uniforms["workingTexture"]!!, 0)  // Assuming a uniform for the texture in the shader
 
@@ -360,6 +363,38 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLUtils.checkEglError("eglSwapBuffers")
 
 	}
+
+	//Displays a static image to the screen from a framebuffer
+	private fun displayBackground() {
+
+		// Bind the default framebuffer to render to the screen
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+		GLUtils.checkEglError("Binding FBO texture")
+
+		// Set up the viewport, shader program, and other state as needed for rendering
+		GLES30.glViewport(0, 0, textureWidth, textureHeight)
+		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+		GLES30.glUseProgram(displayProgram)
+		GLUtils.checkEglError("glUseProgram displayProgram")
+
+		// Bind workingTexture2 from FBO2 to a texture unit and set the corresponding uniform in the shader
+		GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, backgroundImageTexture)
+		GLUtils.checkEglError("Bind FBO texture")
+		GLES30.glUniform1i(uniforms["workingTexture"]!!, 0)  // Assuming a uniform for the texture in the shader
+
+		// Draw the textured quad to the screen
+		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
+
+		//Unbind the texture
+		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+
+		// Swap buffers to display the result
+		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
+		GLUtils.checkEglError("eglSwapBuffers")
+
+	}
+
 
 	///Need to perform this off the main thread
 	//May need to write FBO/texture to a buffer prior to saving
@@ -410,7 +445,47 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		// Swap buffers to display the result
 		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
 		GLUtils.checkEglError("eglSwapBuffers")
+
 	}
+
+	//Display test quad used to validate the pipeline, VBO and VAO setup etc.
+	private fun drawTestQuadToFramebuffer() {
+
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO1)
+
+		// Set up the viewport, shader program, and other state as needed for rendering
+		GLES30.glViewport(0, 0, textureWidth, textureHeight)
+		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+
+		GLES30.glUseProgram(testQuadProgram)
+		GLUtils.checkEglError("Use testQuadProgram")
+
+		// Draw the solid debug quad to the screen
+		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
+
+		//Check for contents by reading pixels from the framebuffer
+		//		val buffer = ByteBuffer.allocateDirect(textureWidth * textureHeight * 4)
+		//		buffer.order(ByteOrder.nativeOrder())
+		//		GLES30.glReadPixels(0, 0, textureWidth, textureHeight, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
+		//
+		//		for (i in 0 until 16 step 4) { // Just as an example, reading the first few pixels
+		//			val r = buffer.get(i).toInt() and 0xFF
+		//			val g = buffer.get(i + 1).toInt() and 0xFF
+		//			val b = buffer.get(i + 2).toInt() and 0xFF
+		//			val a = buffer.get(i + 3).toInt() and 0xFF
+		//			println("Pixel: R=$r, G=$g, B=$b, A=$a")
+		//		}
+
+		// Unbind the framebuffer
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+
+		// Swap buffers to display the result - instead use display frame buffer
+		//		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
+		//		GLUtils.checkEglError("eglSwapBuffers")
+
+		displayOutputTexture(workingTexture1) //texture of fbo1
+	}
+
 
 	//Draw Methods for different examples
 
@@ -493,9 +568,10 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	//The main function executed on each camera frame
 	public fun render(yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray, width: Int, height: Int, radius: Float, flip: Boolean = false) {
      	makeCurrent()
-     	draw(yBytes,uBytes,vBytes, width, height, radius, flip)
+     	// draw(yBytes,uBytes,vBytes, width, height, radius, flip)
 	    //drawWithFilter(1f, true)  //Test coherence with simple gaussian sample
-		//drawTestQuad()  //draw red quad on screen
+		 //drawTestQuad()  //draw red quad on screen
+	     drawTestQuadToFramebuffer()
 	}
 
 	public fun updateParameters(filterParameters: FilterParameters){
@@ -510,6 +586,14 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	}
 
 	//TODO: Used only for testing/development
+
+	public fun setBackgroundDemo(){
+		var bitmap  = ImageProcessing.getBackground("/data/user/0/com.aardman.animatorfilter_example/cache/tempfile.jpg",
+			Size(720, 1280), true)
+		setBackgroundImage(bitmap)
+	}
+
+
 	public fun setBackgroundImage(bitmap: Bitmap) {
 		if (backgroundImg != null)  {
 			cameraImg =  bitmap
