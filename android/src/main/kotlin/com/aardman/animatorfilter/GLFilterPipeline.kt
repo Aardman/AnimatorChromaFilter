@@ -1,25 +1,27 @@
 package com.aardman.animatorfilter
 
 import android.graphics.Bitmap
-import android.icu.text.DateTimePatternGenerator.PatternInfo.OK
 import android.opengl.EGL14
 import android.opengl.EGLConfig
 import android.opengl.EGLExt
+import android.opengl.GLES20.glEnableVertexAttribArray
+import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLES30
 import android.opengl.GLES30.GL_RED
 import android.opengl.GLES30.GL_UNSIGNED_BYTE
-import android.renderscript.Double4
 import android.util.Size
 import android.view.Surface
 import com.aardman.animatorfilter.GLUtils.checkEglError
 import com.aardman.animatorfilter.GLUtils.checkTexturePixels
+import com.aardman.animatorfilter.GLUtils.checkVAOIsBound
+import com.aardman.animatorfilter.GLUtils.checkVBOIsBound
 import com.aardman.animatorfilter.GLUtils.padArrays
-import com.aardman.animatorfilter.GLUtils.padByteArray
 import com.aardman.animatorfilter.GLUtils.setupFramebuffer
 import com.aardman.animatorfilter.GLUtils.setupShaderProgram
-import com.aardman.animatorfilter.GLUtils.setupVertexArrayForProgram
+import com.aardman.animatorfilter.GLUtils.makeVAO
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.FloatBuffer
 
 class GLFilterPipeline(private val outSurface: Surface, private val textureWidth:Int, private  val textureHeight:Int) {
 
@@ -33,7 +35,6 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private var srcYTexture:Int = -1
 	private var srcUTexture:Int = -1
 	private var srcVTexture:Int = -1
-	private var yuvConversionVAO = -1
 
 	//Temporary sample images
 	private var backgroundImg: Bitmap? = null
@@ -43,20 +44,16 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	private var inputImageTexture:Int = -1
 	private var backgroundImageTexture: Int = -1
 	private var filterProgram: Int = -1
-	private var filterVAO = -1
 	private var smoothing: Float = 0f //Set to a constant, no UI to change this
 	private var filterParameters: FilterParameters = FilterParameters()
 
 	//Display
 	private var displayProgram: Int = -1
-	private var displayVAO = -1
 
 	//Test Quad
 	private var testQuadProgram: Int  = -1
-	private var testQuadVAO = -1
 
 	//Globals
-	private var attributes: MutableMap<String, Int> = hashMapOf()
 	private var uniforms: MutableMap<String, Int> = hashMapOf()
 
 	//Main textures
@@ -65,7 +62,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	// 2D quad coordinates for the vertex shader, we use 2 triangles that will cover
 	// the entire image
-	val texCoords = floatArrayOf(
+	val quadCoords = floatArrayOf(
 		// 1st triangle
 		0f, 0f,
 		1f, 0f,
@@ -77,6 +74,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 	)
 
 	private var texVBO = -1
+	private var texVAO = -1
 
 	//Framebuffers
 	//Alternate for processing steps on textures
@@ -138,12 +136,22 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		// create a new EGL window surface, we use the "outSurface" provided to us (by Flutter).
 		mEGLSurface = EGL14.eglCreateWindowSurface(mEGLDisplay, configs[0], outSurface, surfaceAttribs, 0)
 		GLUtils.checkEglError("eglCreateWindowSurface")
+
+		// Disable depth testing for 2D rendering
+		GLES30.glDisable(GLES30.GL_DEPTH_TEST)
 	}
 
 	private fun setupOpenGLObjects() {
+
+		//After these first two steps texVBO and texVAO are setup and bound for the duration of the pipeline
 		setupCoordsVBO()
+		setupTexVAO(texVBO, quadCoords)
+
+		//Textures created and workingTextures bound to Framebuffers for repeated updates
 		setupTextures()
 		setupFramebuffers()
+
+		//Setup methods, mostly only load programs and identify uniforms for processing
 		setupConverter()
 		setupFilter()
 		setupDisplayShader()
@@ -177,34 +185,68 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		workingFBO2 = setupFramebuffer(workingTexture2)
 	}
 
+	//Create,load data and bind VBO
 	//VBO is reused for each processing step
 	private fun setupCoordsVBO() {
 
 		// Create buffer
-		var texCoordsBuffer = ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
-			put(texCoords)
+		var quadCoordsBuffer = ByteBuffer.allocateDirect(quadCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+			put(quadCoords)
 			position(0)
 		}
 
-		val texCoordBuffer = IntArray(1)
-		GLES30.glGenBuffers(1, texCoordBuffer, 0)
+		val quadCoordVBOs = IntArray(1)
+		GLES30.glGenBuffers(1, quadCoordVBOs, 0)
 		checkEglError("generate texCoord buffer")
 
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texCoordBuffer[0])
+		texVBO = quadCoordVBOs[0]
+
+		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texVBO)
 		checkEglError("bind coord buffer")
 
-		GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, texCoordsBuffer.capacity() * 4, texCoordsBuffer, GLES30.GL_STATIC_DRAW)
+		GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, quadCoordsBuffer.capacity() * 4, quadCoordsBuffer, GLES30.GL_STATIC_DRAW)
 
-		texVBO = texCoordBuffer[0]
+	}
+
+	//Create VAO, bind it, then bind to VBO and enable the position attribute
+	//VAO is reused for each processing step
+	private fun setupTexVAO(vboId: Int, vertexData: FloatArray)  {
+		val vaoIds = IntArray(1)
+		GLES30.glGenVertexArrays(1, vaoIds, 0) // Generate VAO ID
+
+		texVAO = vaoIds[0]
+		GLES30.glBindVertexArray(texVAO) // Bind the VAO,  remains bound for entire pipeline
+
+		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, vboId) // Bind the VBO
+		//GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, vertexData.size * 4, FloatBuffer.wrap(vertexData), GLES30.GL_STATIC_DRAW) // Upload vertex data
+
+		//position is always 0 in the single vertex shader we are using
+		val positionAttributeLocation = 0
+		glEnableVertexAttribArray(positionAttributeLocation) // Enable vertex attribute array
+		glVertexAttribPointer(positionAttributeLocation, 2, GLES30.GL_FLOAT, false, 2 * 4, 0) // Specify vertex attribute pointer
+
+	}
+
+	private fun setupTestQuadShader() {
+		this.testQuadProgram = setupShaderProgram(BaseVertexShader, RedFragmentShader)
+	}
+
+	private fun setupConverter() {
+		this.yuvConversionProgram = setupShaderProgram(VertexShaderSource,  RedFragmentShader) // conversionShader)
+
+		// ... other specific setups like uniforms
+		// Find uniforms
+		this.uniforms["yTexture"] = GLES30.glGetUniformLocation(this.yuvConversionProgram, "yTexture")
+		this.uniforms["vTexture"] = GLES30.glGetUniformLocation(this.yuvConversionProgram, "vTexture")
+		this.uniforms["uTexture"] = GLES30.glGetUniformLocation(this.yuvConversionProgram, "uTexture")
 	}
 
 	//Setup the chroma filter
 	private fun setupFilter(){
-
-		this.filterProgram = setupShaderProgram(VertexShaderSource, chromaKeyFilter)
+    	this.filterProgram = setupShaderProgram(VertexShaderSource, chromaKeyFilter)
 
 		// Get vertex shader attributes
-		this.attributes["chromaTextureCoordinate"] = GLES30.glGetAttribLocation(this.filterProgram, "chromaTextureCoordinate")
+		//this.attributes["chromaTextureCoordinate"] = GLES30.glGetAttribLocation(this.filterProgram, "chromaTextureCoordinate")
 
 		// ... other specific setups like uniforms
 		// Find uniforms
@@ -213,114 +255,20 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		this.uniforms["thresholdSensitivity"] = GLES30.glGetUniformLocation(this.filterProgram, "thresholdSensitivity")
 		this.uniforms["smoothing"] = GLES30.glGetUniformLocation(this.filterProgram, "backgroundImageTexture")
 		this.uniforms["backgroundImageTexture"] = GLES30.glGetUniformLocation(this.filterProgram, "colorToReplace")
-
-		//Enable related attributes (might be in a more generic location, but this sequence is required
-		GLES30.glEnableVertexAttribArray(this.attributes["chromaTextureCoordinate"]!!)
-		checkEglError("enableVertexAttribArray")
-		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-		GLES30.glVertexAttribPointer(this.attributes["chromaTextureCoordinate"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
-		checkEglError("glVertexAttribPointer")
-
-		filterVAO = GLUtils.setupVertexArrayForProgram(filterProgram)
-		checkEglError("generate vertex arrays")
-		GLES30.glBindVertexArray(filterVAO)
-
-		//Enable related attributes, link with currently bound VAO
-		GLES30.glEnableVertexAttribArray(this.attributes["chromaTextureCoordinate"]!!)
-		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-		GLES30.glVertexAttribPointer(this.attributes["chromaTextureCoordinate"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
-	}
+    }
 
 	private fun setupDisplayShader() {
+     	this.displayProgram  = setupShaderProgram(VertexShaderSource, displayShader)
 
-		this.displayProgram  = setupShaderProgram(VertexShaderSource, displayShader)
-
-		// Get vertex shader attributes, this is the same for all shaders
-		this.attributes["d_texCoord"] = GLES30.glGetAttribLocation(this.displayProgram, "a_texCoord")
-
-		// Find uniforms
+		// Save uniform names for later use
 		this.uniforms["workingTexture"] = GLES30.glGetUniformLocation(this.displayProgram, "workingTexture")
-
-	    displayVAO = GLUtils.setupVertexArrayForProgram(displayProgram)
-
-		checkEglError("generate vertex arrays")
-		GLES30.glBindVertexArray(displayVAO)
-
-		//Enable related attributes, link with currently bound VAO
-		GLES30.glEnableVertexAttribArray(this.attributes["d_texCoord"]!!)
-
-		//Bind the VBO
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texVBO)
-
-		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-		GLES30.glVertexAttribPointer(this.attributes["d_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
-
-		//Unbind VAO and VBO
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, 0)
-		GLES30.glBindVertexArray(0)
-	}
-
-	private fun setupTestQuadShader() {
-		this.testQuadProgram = setupShaderProgram(BaseVertexShader, RedFragmentShader)
-
-		// ... other specific setups like uniforms
-		// Get vertex shader attributes
-		this.attributes["a_texCoord"] = GLES30.glGetAttribLocation(this.testQuadProgram, "a_texCoord")
-		checkEglError("glGetAttribLocation a_texCoord")
-
-		testQuadVAO = setupVertexArrayForProgram(testQuadProgram)
-		checkEglError("generate vertex arrays")
-		GLES30.glBindVertexArray(testQuadVAO)
-
-		//Enable related attributes, link with currently bound VAO
-		GLES30.glEnableVertexAttribArray(this.attributes["a_texCoord"]!!)
-		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-
-		//Bind the VBO
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texVBO)
-
-		GLES30.glVertexAttribPointer(this.attributes["a_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
-
-		//Unbind VAO and VBO
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, 0)
-		GLES30.glBindVertexArray(0)
-
-	}
-
-	private fun setupConverter() {
-		this.yuvConversionProgram = setupShaderProgram(VertexShaderSource, conversionShader)
-
-		// Get vertex shader attributes
-		this.attributes["c_texCoord"] = GLES30.glGetAttribLocation(this.yuvConversionProgram, "a_texCoord")
-
-		// ... other specific setups like uniforms
-		// Find uniforms
-		this.uniforms["yTexture"] = GLES30.glGetUniformLocation(this.yuvConversionProgram, "yTexture")
-		this.uniforms["vTexture"] = GLES30.glGetUniformLocation(this.yuvConversionProgram, "vTexture")
-		this.uniforms["uTexture"] = GLES30.glGetUniformLocation(this.yuvConversionProgram, "uTexture")
-
-		//Enable related attributes (might be in a more generic location, but this sequence is required
-		GLES30.glEnableVertexAttribArray(this.attributes["c_texCoord"]!!)
-		checkEglError("enableVertexAttribArray")
-		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-		GLES30.glVertexAttribPointer(this.attributes["c_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
-		checkEglError("glVertexAttribPointer")
-
-		yuvConversionVAO = GLUtils.setupVertexArrayForProgram(yuvConversionProgram)
-		checkEglError("generate vertex arrays")
-		GLES30.glBindVertexArray(yuvConversionVAO)
-
-		//Enable related attributes, link with currently bound VAO
-		GLES30.glEnableVertexAttribArray(this.attributes["c_texCoord"]!!)
-		// Describe how to pull data out of the buffer, take 2 items per iteration (x and y)
-		GLES30.glVertexAttribPointer(this.attributes["c_texCoord"]!!, 2, GLES30.GL_FLOAT, false, 0, 0)
-	}
+   }
 
 	//Converts the srcYUV textures to RGB and stores in workingTexture
 	private fun convertYUV(width: Int, height: Int) {
 
 		// Bind the framebuffer where workingTexture is enabled
-		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO1)
+		GLES30.glBindFramebuffer(GLES30.GL_DRAW_FRAMEBUFFER, workingFBO1)
 
 		GLES30.glUseProgram(this.yuvConversionProgram)
 
@@ -343,23 +291,13 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glViewport(0, 0, width, height)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
 
-		//Enable related attributes, link with currently bound VAO
-		GLES30.glEnableVertexAttribArray(this.attributes["c_texCoord"]!!)
-
-		//Bind the VBO
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texVBO)
-
-		//Bind the VAO
-		GLES30.glBindVertexArray(yuvConversionVAO)
-
 		//Draw to the currently bound texture using the program
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
 
-		val texturePopulated = checkTexturePixels(workingTexture1, textureWidth, textureHeight, GLES30.GL_RGBA,null)
-		print ("converted workingTexture1 contains pixels = " + texturePopulated)
-
-		//Unbind vao
-		GLES30.glBindVertexArray(0)
+		//Check for contents by reading pixels from the framebuffer
+		val buffer = ByteBuffer.allocateDirect(textureWidth * textureHeight)
+		buffer.order(ByteOrder.nativeOrder())
+		GLES30.glReadPixels(0, 0, textureWidth, textureHeight, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
 
 		// Unbind the framebuffer
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
@@ -367,8 +305,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	//Applies the Chromakey filter to the input framebuffer
 	private fun applyFilter(){
-
-		// Bind the ouptut framebuffer bound to the output texture
+    	// Bind the ouptut framebuffer bound to the output texture
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO2)
 
 		//Use conversion program and set parameters
@@ -387,14 +324,8 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glViewport(0, 0, textureWidth, textureHeight)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
 
-		//Bind the VAO
-		GLES30.glBindVertexArray(filterVAO)
-
-		//Draw to the currently bound texture using the program
+	 	//Draw to the currently bound texture using the program
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
-
-		//Unbind vao
-		GLES30.glBindVertexArray(0)
 
 		// Unbind the framebuffer
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
@@ -402,8 +333,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 	//Displays workingTexture to the screen
 	private fun displayOutputTexture() {
-
-		// Bind the default framebuffer to render to the screen
+        // Bind the default framebuffer to render to the screen
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 		GLUtils.checkEglError("Binding FBO texture")
 
@@ -419,14 +349,8 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLUtils.checkEglError("Bind FBO texture")
 		GLES30.glUniform1i(uniforms["workingTexture"]!!, 0)  // Assuming a uniform for the texture in the shader
 
-		// Bind the VAO that contains the vertex data for the quad
-		GLES30.glBindVertexArray(displayVAO)
-
 		// Draw the textured quad to the screen
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
-
-		// Unbind the VAO
-		GLES30.glBindVertexArray(0)
 
 		//Unbind the texture
 		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
@@ -460,51 +384,28 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLES30.glViewport(0, 0, textureWidth, textureHeight)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
 
-		// Bind the VAO that contains the vertex data for the quad
-		GLES30.glBindVertexArray(testQuadVAO)
-		checkEglError("bind VAO")
-
 		// Draw the solid debug quad to the screen
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
 		checkEglError("glDrawArrays")
 
-		// Unbind the VAO
-		GLES30.glBindVertexArray(0)
-		checkEglError("unbind AO")
-
 		// Unbind the framebuffer
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-
-	}
+    }
 
 	//Draw Methods
 
-	//Display test quad used to validate the pipeline
+	//Display test quad used to validate the pipeline, VBO and VAO setup etc.
 	private fun drawTestQuad() {
-		// Disable depth testing for 2D rendering
-		GLES30.glDisable(GLES30.GL_DEPTH_TEST)
 
 		// Set up the viewport, shader program, and other state as needed for rendering
 		GLES30.glViewport(0, 0, textureWidth, textureHeight)
 		GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+
 		GLES30.glUseProgram(testQuadProgram)
 		GLUtils.checkEglError("Use testQuadProgram")
 
-		// Bind the VAO that contains the vertex data for the quad
-		GLES30.glBindVertexArray(testQuadVAO)
-		checkEglError("bind vertex array")
-
-		//Enable related attributes, link with currently bound VAO
-		GLES30.glEnableVertexAttribArray(this.attributes["a_texCoord"]!!)
-
-		//Bind the VBO
-		GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, texVBO)
-
 		// Draw the solid debug quad to the screen
 		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
-
-		// Unbind the VAO
-		GLES30.glBindVertexArray(0)
 
 		// Swap buffers to display the result
 		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface)
@@ -545,14 +446,13 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		GLUtils.checkEglError("eglSwapBuffers")
 	}
 
-
 	//Main draw method for chromakey processing
 	fun draw (yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray, width: Int, height: Int, radius: Float, flip: Boolean = false) {	// *** A ****
 
 		// *** A ****
 		//Load Y U V data ( into existing textures to use in image conversion
 
-		//Pad U V if necessary
+		//Pad U V if necessary, adding bytes at end to fill expected rowstride
 		val (uBytesPadded, vBytesPadded) = padArrays(yBytes, uBytes, vBytes)
 
 		GLUtils.updateYUVTextures(yBytes, srcYTexture, uBytesPadded, srcUTexture, vBytesPadded, srcVTexture, width, height)
@@ -571,7 +471,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 		print ("converted workingTexture1 sampled pixels from = " + bytes + " to "+ buffer)
 
 		// *** C ****
-		applyFilter()
+		//applyFilter()
 
 		//TODO Delete test code
 		//Fill the working texture with solid red for a test rendering
@@ -581,7 +481,7 @@ class GLFilterPipeline(private val outSurface: Surface, private val textureWidth
 
 		// *** D  ****
 		//Draw the filterSrcTexture to the screen
-		displayOutputTexture()
+		//displayOutputTexture()
 
 		// *** E  ****
 		//D: Output the changed texture to a file on a background thread

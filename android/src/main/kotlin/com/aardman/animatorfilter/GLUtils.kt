@@ -199,7 +199,7 @@
 
 		// Sets up a vertex array for a given shader program and attribute name
 		//NB: helper functions should not change OpenGL state for clarity
-		fun setupVertexArrayForProgram(programId: Int): Int {
+		fun makeVAO(): Int {
 			val vao = IntArray(1)
 			GLES30.glGenVertexArrays(1, vao, 0)
 			checkEglError("generate vertex arrays")
@@ -229,6 +229,21 @@
 		}
 
 		//Debug methods
+
+		fun  checkVBOIsBound(vboId: Int): Boolean  {
+			val buffer = IntArray(1)
+			GLES30.glGetIntegerv(GLES30.GL_ARRAY_BUFFER_BINDING, buffer, 0)
+			val currentVBO = buffer[0] // This will be the ID of the currently bound VBO, or 0 if none is bound.
+			return currentVBO == vboId
+		}
+
+		fun  checkVAOIsBound(vaoId: Int): Boolean {
+			val array = IntArray(1)
+			GLES30.glGetIntegerv(GLES30.GL_VERTEX_ARRAY_BINDING, array, 0)
+			val currentVAO = array[0]
+			return currentVAO == vaoId
+		}
+
 		fun checkTexturePixels(textureId: Int, textureWidth: Int, textureHeight: Int, format:Int = GLES30.GL_RGBA, bytesToCheck:ByteArray?):Pair<ByteArray, ByteArray>  {
 			// Create a framebuffer and attach the texture to it
 			val frameBuffer = IntArray(1)
