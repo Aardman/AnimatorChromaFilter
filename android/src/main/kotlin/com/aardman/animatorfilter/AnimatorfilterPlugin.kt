@@ -125,10 +125,10 @@ class AnimatorfilterPlugin: FlutterPlugin, MethodCallHandler {
         }
 
         val backgroundImg = call.argument("img") as? String
-        val width = call.argument<Int>("width")
-        val height = call.argument<Int>("height")
+        val width = call.argument<Double>("width")?.toInt()
+        val height = call.argument<Double>("height")?.toInt()
 
-        if (backgroundImg != null &&width != null && height != null) {
+        if (backgroundImg != null && width != null && height != null) {
           val bitmap = ImageProcessing.getBackground(backgroundImg, Size(width, height), true);
           filterPipeline?.setBackgroundImage(bitmap)
         }

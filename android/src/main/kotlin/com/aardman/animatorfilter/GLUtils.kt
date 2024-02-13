@@ -2,6 +2,7 @@
 
 	import android.graphics.Bitmap
 	import android.opengl.EGL14
+	import android.opengl.GLES20
 	import android.opengl.GLES30
 	import android.util.Log
 	import java.nio.ByteBuffer
@@ -35,16 +36,38 @@
 			GLES30.glAttachShader(program, fragmentShader)
 			GLES30.glLinkProgram(program)
 
+			// Check the compilation status
+			val compileStatus = IntArray(1)
+			GLES20.glGetShaderiv(fragmentShader, GLES20.GL_COMPILE_STATUS, compileStatus, 0)
+
+			if (compileStatus[0] == 0) {
+				// If compilation failed, print the shader info log and delete the shader
+				val infoLog = GLES20.glGetShaderInfoLog(fragmentShader)
+				Log.e("Shader", "Error compiling shader: $infoLog")
+				GLES20.glDeleteShader(fragmentShader)
+				return 0
+			}
+
+			// Check the link status
+			val linkStatus = IntArray(1)
+			GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0)
+
+			if (linkStatus[0] == 0) {
+				// If compilation failed, print the shader info log and delete the shader
+				val infoLog = GLES20.glGetProgramInfoLog(program)
+				Log.e("Program", "Error linking program: $infoLog")
+				return 0
+			}
+
 			return program
 		}
 
-	   fun setupShaderProgram(vertexShaderSource: String, fragmentShaderSource: String): Int {
-		// Create and compile shaders, link program, etc.
-		val program  = GLUtils.createProgram(
-			vertexShaderSource, fragmentShaderSource
-		)
-		checkEglError("setUpShaderProgram")
-		return program
+		fun setupShaderProgram(vertexShaderSource: String, fragmentShaderSource: String): Int {			// Create and compile shaders, link program, etc.
+			val program = GLUtils.createProgram(
+				vertexShaderSource, fragmentShaderSource
+			)
+			checkEglError("setUpShaderProgram")
+			return program
 		}
 
 		fun setupFramebuffer(texture: Int): Int {
@@ -104,10 +127,9 @@
 		/*
 		 * Android camera image U, V, planes are sampled with alternate pixels, hence the need to pack the data into a 1/2 size array before filling the textures.
 		 */
-		fun updateYUVTextures(yPlane: ByteArray, yTextureId: Int,
-							  uPlane: ByteArray, uTextureId: Int,
-							  vPlane: ByteArray, vTextureId: Int,
-							  width: Int, height: Int)  {
+		fun updateYUVTextures(
+			yPlane: ByteArray, yTextureId: Int, uPlane: ByteArray, uTextureId: Int, vPlane: ByteArray, vTextureId: Int, width: Int, height: Int
+		) {
 
 			val sampledUPlane = packYUV(uPlane, width, 2)
 			val sampledVPlane = packYUV(vPlane, width, 2)
@@ -169,11 +191,10 @@
 			val error = EGL14.eglGetError()
 			if (error != EGL14.EGL_SUCCESS) {
 				throw RuntimeException(msg + ": EGL error: 0x" + Integer.toHexString(error))
-			}
-			//debug all openGL calls
-	//		else {
-	//			print("EGL " + msg + "\n")
-	//		}
+			}			//debug all openGL calls
+			//		else {
+			//			print("EGL " + msg + "\n")
+			//		}
 		}
 
 		private fun buildShader(type: Int, shaderSource: String): Int {
@@ -206,8 +227,7 @@
 			return vao[0]
 		}
 
-		fun getBitmapFromFBO(textureWidth: Int, textureHeight: Int, workingFBO: Int): Bitmap {
-			// Bind the framebuffer to which the texture is attached
+		fun getBitmapFromFBO(textureWidth: Int, textureHeight: Int, workingFBO: Int): Bitmap {			// Bind the framebuffer to which the texture is attached
 			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, workingFBO)
 
 			// Prepare a buffer to store the pixels
@@ -230,22 +250,27 @@
 
 		//Debug methods
 
-		fun  checkVBOIsBound(vboId: Int): Boolean  {
+		fun checkVBOIsBound(vboId: Int): Boolean {
 			val buffer = IntArray(1)
 			GLES30.glGetIntegerv(GLES30.GL_ARRAY_BUFFER_BINDING, buffer, 0)
 			val currentVBO = buffer[0] // This will be the ID of the currently bound VBO, or 0 if none is bound.
 			return currentVBO == vboId
 		}
 
-		fun  checkVAOIsBound(vaoId: Int): Boolean {
+		fun checkVAOIsBound(vaoId: Int): Boolean {
 			val array = IntArray(1)
 			GLES30.glGetIntegerv(GLES30.GL_VERTEX_ARRAY_BINDING, array, 0)
 			val currentVAO = array[0]
 			return currentVAO == vaoId
 		}
 
-		fun checkTexturePixels(textureId: Int, textureWidth: Int, textureHeight: Int, format:Int = GLES30.GL_RGBA, bytesToCheck:ByteArray?):Pair<ByteArray, ByteArray>  {
-			// Create a framebuffer and attach the texture to it
+		fun checkTexturePixels(
+			textureId: Int,
+			textureWidth: Int,
+			textureHeight: Int,
+			format: Int = GLES30.GL_RGBA,
+			bytesToCheck: ByteArray?
+		): Pair<ByteArray, ByteArray> {			// Create a framebuffer and attach the texture to it
 			val frameBuffer = IntArray(1)
 			GLES30.glGenFramebuffers(1, frameBuffer, 0)
 			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, frameBuffer[0])
@@ -269,13 +294,12 @@
 			GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 			GLES30.glDeleteFramebuffers(1, frameBuffer, 0)
 
-			if(bytesToCheck == null) {
+			if (bytesToCheck == null) {
 				val res = containsNonZeroValue(buffer)
 				val outputArray = ByteArray(buffer.remaining())
 				buffer.get(outputArray)
-				return Pair(ByteArray(0),  outputArray)
-			}
-			else {
+				return Pair(ByteArray(0), outputArray)
+			} else {
 				val outputArray = ByteArray(buffer.remaining())
 				buffer.get(outputArray)
 				return Pair(bytesToCheck, outputArray)
@@ -303,8 +327,7 @@
 		//Generic  helper functions
 		public fun padByteArray(b1: ByteArray, padding: Int): ByteArray {
 			val paddedArray = ByteArray(b1.size + padding)
-			System.arraycopy(b1, 0, paddedArray, 0, b1.size)
-			// The remaining bytes in paddedArray are automatically initialized to zero
+			System.arraycopy(b1, 0, paddedArray, 0, b1.size)			// The remaining bytes in paddedArray are automatically initialized to zero
 			return paddedArray
 		}
 
@@ -312,17 +335,16 @@
 		 * Pad byte u and v byte arrays to 1/2 yByte array length if required padding
 		 * with extra zero values if needed.
 		 */
-		public fun padArrays(yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray): Pair<ByteArray, ByteArray>
-		{
+		public fun padArrays(yBytes: ByteArray, uBytes: ByteArray, vBytes: ByteArray): Pair<ByteArray, ByteArray> {
 			val requiredUVSize = yBytes.size / 2
 			var paddedUBytes: ByteArray? = null
 			var paddedVBytes: ByteArray? = null
 
 			if (uBytes.size < requiredUVSize) {
-				paddedUBytes = padByteArray(uBytes, requiredUVSize - uBytes.size )
+				paddedUBytes = padByteArray(uBytes, requiredUVSize - uBytes.size)
 			}
 			if (vBytes.size < requiredUVSize) {
-				paddedVBytes = padByteArray(vBytes, requiredUVSize - vBytes.size )
+				paddedVBytes = padByteArray(vBytes, requiredUVSize - vBytes.size)
 			}
 
 			val retUByte = if (paddedUBytes == null) uBytes else paddedUBytes
@@ -331,5 +353,61 @@
 			return Pair(retUByte, retVByte)
 		}
 
+		//Debugging  helpers
 
+		public fun printActiveUniforms(shaderProgramId: Int, label:String) {			// Get the number of active uniforms
+			val countBuffer = IntArray(1)
+			GLES20.glGetProgramiv(shaderProgramId, GLES20.GL_ACTIVE_UNIFORMS, countBuffer, 0)
+			val count = countBuffer[0]
+
+			println("")
+			println("*****")
+			println("Uniforms for program: $label")
+			println("Uniform  : Active Uniforms: $count")
+
+			for (i in 0 until count) {
+				val maxLengthBuffer = IntArray(1)
+				GLES20.glGetProgramiv(shaderProgramId, GLES20.GL_ACTIVE_UNIFORM_MAX_LENGTH, maxLengthBuffer, 0)
+				val maxLength = maxLengthBuffer[0]
+
+				val lengthBuffer = IntArray(1)
+				val sizeBuffer = IntArray(1)
+				val typeBuffer = IntArray(1)
+				val nameBuffer = ByteArray(maxLength)
+
+				GLES20.glGetActiveUniform(shaderProgramId, i, maxLength, lengthBuffer, 0, sizeBuffer, 0, typeBuffer, 0, nameBuffer, 0)
+				val name = nameBuffer.decodeToString(0, lengthBuffer[0])
+
+				val size = sizeBuffer[0]
+				val type = typeBuffer[0]
+				val typeName = getUniformTypeName(type)
+
+				println("Uniform #$i: Name = $name, Size = $size, Type = $typeName")
+				println("*****")
+			}
+		}
+
+		//Not all types, extend as required
+		fun getUniformTypeName(type: Int): String {
+			return when (type) {
+				GLES20.GL_FLOAT -> "float"
+				GLES20.GL_FLOAT_VEC2 -> "vec2"
+				GLES20.GL_FLOAT_VEC3 -> "vec3"
+				GLES20.GL_FLOAT_VEC4 -> "vec4"
+				GLES20.GL_INT -> "int"
+				GLES20.GL_INT_VEC2 -> "ivec2"
+				GLES20.GL_INT_VEC3 -> "ivec3"
+				GLES20.GL_INT_VEC4 -> "ivec4"
+				GLES20.GL_BOOL -> "bool"
+				GLES20.GL_BOOL_VEC2 -> "bvec2"
+				GLES20.GL_BOOL_VEC3 -> "bvec3"
+				GLES20.GL_BOOL_VEC4 -> "bvec4"
+				GLES20.GL_FLOAT_MAT2 -> "mat2"
+				GLES20.GL_FLOAT_MAT3 -> "mat3"
+				GLES20.GL_FLOAT_MAT4 -> "mat4"
+				GLES20.GL_SAMPLER_2D -> "sampler2D"
+				GLES20.GL_SAMPLER_CUBE -> "samplerCube"
+				else -> "unknown"
+			}
+		}
 	}

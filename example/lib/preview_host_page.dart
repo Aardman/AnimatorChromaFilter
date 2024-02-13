@@ -72,9 +72,10 @@ class _PreviewPageState  extends State<PreviewPage> {
       File backgroundFile = await getImageFileFromAssets(
           "assets/backgrounds/bkgd_01.jpg");
       String? fullPath = backgroundFile.path; 
-      await _controller?.setBackgroundImagePath(fullPath); 
+      //await _controller?.setBackgroundImagePath(fullPath);
+
     } catch (e) {
-      log("Error setting background image, error: ${e.toString()}");
+      log("🍎 Error setting background image, error: ${e.toString()}");
     }
   }
 

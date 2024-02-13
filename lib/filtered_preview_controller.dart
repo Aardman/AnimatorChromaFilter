@@ -92,10 +92,13 @@ abstract class FilteredPreviewController   {
     }
 
     try {
-        final params = {'img': backgroundImagePath};
+        final params = {'img': backgroundImagePath,
+                        'width' : _width,
+                        'height': _height
+                       };
         await _channel.invokeMethod('setBackgroundImagePath', params);
     } catch (e) {
-      print('Error processing camera image: $e');
+      print('Error setting background image path: $e');
     }
   }
    

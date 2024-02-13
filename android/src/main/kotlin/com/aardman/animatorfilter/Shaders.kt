@@ -57,7 +57,8 @@ public val gaussianShader = """#version 300 es
 	"""
 
 public val chromaKeyFilter  = """#version 300 es
-    precision highp float; 
+            precision highp float; 
+    
              varying highp vec2 textureCoordinate;
              varying highp vec2 textureCoordinate2;
             
@@ -116,14 +117,15 @@ public val conversionShader = """#version 300 es
 public val displayShader = """#version 300 es
 		precision mediump float;
 		
-		uniform sampler2D workingTexture; 
-		in vec2 v_texCoord;
+	    in vec2 v_texCoord;  
+
+        uniform sampler2D workingTexture; 
 		
 		out vec4 outColor;
 		
 		void main() { 
 		    vec4 texColor = texture(workingTexture, v_texCoord);
-            outColor = vec4(texColor.r, texColor.g, texColor.b, 1.0);
+            outColor = vec4(texColor.r, texColor.g, texColor.b, 1.0); 
 		}
 	"""
 
@@ -131,12 +133,22 @@ public val displayShader = """#version 300 es
 //Just outputs red for every pixel
 public var DebugFragmentShader = """#version 300 es
 		precision mediump float;
-		  
-		out vec4 outColor;
-		
-		void main() {  
-            outColor = vec4(1f, 0f, 0f, 1.0);
-		}
+
+        uniform vec2 iResolution;
+     
+        void main() {
+          vec2 uv = vec2(gl_FragCoord.xy / iResolution.xy);
+        
+          //optionally fix aspect ratio
+          uv.x *= iResolution.x / iResolution.y;
+        
+          //18x18 checkered background
+          float gray = mix(0.8, 1.0, checker(uv, 18.0));
+          
+          gl_FragColor.rgb = vec3(gray);
+          gl_FragColor.a = 1.0;
+        }
+        
 	"""
 
 
@@ -151,6 +163,21 @@ public val BaseVertexShader = """#version 300 es
          gl_Position = vec4(clipSpace, 0.0, 1.0);
      }
 """
+
+//
+public var SolidFragmentShader = """#version 300 es
+		precision mediump float;
+
+        uniform float r;
+        uniform float g;
+        uniform float b;
+
+		out vec4 outColor;
+ 		
+		void main() {  
+            outColor = vec4(r, g, b, 1.0);
+		}
+	"""
 
 
 //Just outputs red for every pixel
