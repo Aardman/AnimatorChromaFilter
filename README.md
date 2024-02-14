@@ -32,7 +32,6 @@ This takes a **FilterPreviewController** as a constructor argument, this handles
 | **FilterPreviewControllerAndroid** | Not currently implemented  |
 
 
-
 **FilterPreviewController** provides common functions to all platform controllers and defines two abstract methods update and processStillFrame that need to be implemented in a concrete platform specific subclass such as **FilterPreviewControllerIOS**
 
 The following sequence of calls are required to use **FilterPreviewController**
@@ -57,14 +56,14 @@ The params argument is structured as follows with a key-value pairing method to 
 
     { 
      'colour', [int, int, int], //values ranging from 0..255
-     'threshold', float,        //float in the range 0.0..1.0
+     'sensitivity', float,        //float in the range 0.0..1.0
      'smoothing', float         //float in the range 0.0..1.0
     }
   
 |   Property |  Type | Range |  Default value
 | ------------- | ------------- | ------------ | ------------
 | colour   | [int,int,int] | 0..255 | [0, 255, 0]
-| threshold |  float  | 0..1 | 0.4 
+| sensitivity |  float  | 0..1 | 0.4 
 | smoothing |  float  | 0..1 | 0.3
 
 ###Setting the image for chromakeying 
