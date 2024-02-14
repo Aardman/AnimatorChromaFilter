@@ -47,7 +47,7 @@ This method must be called every time the device has a format change, eg: when i
 
 ###Setting and updating parameters
 
-If no parameters are set then the filtering operation will apply default values with green as the chromakey colour. 
+If no parameters are set then the filtering operation will apply default values listed in the table below. 
 
 To set parameters or to update them, use the updateFilters method of **FilterPreviewController**
 
@@ -56,13 +56,16 @@ To set parameters or to update them, use the updateFilters method of **FilterPre
 The params argument is structured as follows with a key-value pairing method to minimize API complexity.
 
     { 
-     'colour', [int, int, int],
-     'threshold', float,
-     'smoothing', float
+     'colour', [int, int, int], //values ranging from 0..255
+     'threshold', float,        //float in the range 0.0..1.0
+     'smoothing', float         //float in the range 0.0..1.0
     }
-   
-  R, G, B values need to be suppliled as an int[2] array with values ranging from 0 - 255
-
+  
+|   Property |  Type | Range |  Default value
+| ------------- | ------------- | ------------ | ------------
+| colour   | [int,int,int] | 0..255 | [0, 255, 0]
+| threshold |  float  | 0..1 | 0.4 
+| smoothing |  float  | 0..1 | 0.3
 
 ###Setting the image for chromakeying 
 
