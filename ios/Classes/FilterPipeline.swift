@@ -52,9 +52,9 @@ public class FilterPipeline : NSObject {
         setupCoreImage()
         self.filterParameters = filterParameters
         self.flutterTextureRegistry =  flutterTextureRegistry
-        #if DEBUG
+        //#if DEBUG
         saveSampleBackgroundToDocs()
-        #endif
+        //#endif
         updateChangedFilters(filterParameters)
     }
     
