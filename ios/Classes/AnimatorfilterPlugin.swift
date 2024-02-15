@@ -61,15 +61,17 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     
     //return true if successful
     func handleSetBackgroundImagePath(_ call: FlutterMethodCall, result: @escaping FlutterResult){
-        if let arguments = call.arguments as? NSDictionary,
-           let imgPath = arguments[ParamNames.backgroundPath.rawValue]  as? String {
-            AnimatorfilterPlugin.instance?.pipeline?.setBackgroundImageFrom(path: imgPath)
-            let data:[String: Any] = ["result": true]
-            result(data);
-        }
-        else{
+        guard let arguments = call.arguments as? NSDictionary  else {
             result(["result", "false"])
+            return
         }
+        guard let imgPath = arguments[ParamNames.img.rawValue]  as? String  else{
+            result(["result", "false"])
+            return
+        }
+        AnimatorfilterPlugin.instance?.pipeline?.setBackgroundImageFrom(path: imgPath)
+        let data:[String: Any] = ["result": true]
+        result(data);
     }
     
     //just write the input bgra8888 image data to the native texture to display in widget
@@ -116,22 +118,17 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     
     func parseParams(_ arguments: NSDictionary) -> FilterParameters{
         var result = FilterParameters()
-        if let colour = arguments[ParamNames.colour.rawValue]  as? [Int],
-            let sensitivity = arguments[ParamNames.sensitivity.rawValue]  as? Float,
-            let smoothing = arguments[ParamNames.smoothing.rawValue]  as? Float {
-            let red = Float(colour[0]/255)
-            let green = Float(colour[1]/255)
-            let blue  = Float(colour[2]/255)
-            result = FilterParameters(
-                red:red,
-                green:green,
-                blue:blue,
-                threshold: sensitivity,
-                smoothing: smoothing
-            )
+        if let colour = arguments[ParamNames.colour.rawValue]  as? [Double] {
+            result.maskColor = (Float(colour[0]/255),Float(colour[1]/255),Float(colour[2]/255))
+        }
+        if let sensitivity = arguments[ParamNames.sensitivity.rawValue] as? Double {
+            result.threshold = Float(sensitivity)
+        }
+        if let smoothing =  arguments[ParamNames.smoothing.rawValue] as? Double {
+            result.smoothing = Float(smoothing)
         }
         return result
-    } 
+    }
     
     func handleEnable(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         AnimatorfilterPlugin.instance?.pipeline?.filtersEnabled = true

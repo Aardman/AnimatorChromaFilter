@@ -23,7 +23,7 @@ enum ParamNames: String {
     case height
     
     //chroma filter
-    case backgroundPath
+    case img
     case colour
     case sensitivity
     case hueRange

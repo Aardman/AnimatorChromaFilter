@@ -45,7 +45,7 @@ public class FilterParameters: NSObject {
     
    @objc
    public init(dictionary: Dictionary<String,AnyObject>){
-        if let filename = dictionary[ParamNames.backgroundPath.rawValue] as? String {
+        if let filename = dictionary[ParamNames.img.rawValue] as? String {
             backgroundImage = filename
         }
        if let colours = dictionary[ParamNames.colour.rawValue] as? [NSNumber],
