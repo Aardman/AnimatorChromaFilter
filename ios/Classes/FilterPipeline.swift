@@ -38,7 +38,7 @@ public class FilterPipeline : NSObject {
     var backgroundCIImage:CIImage?
     var scaledBackgroundCIImage:CIImage?
     var chromaFilter:BlendingChromaFilter?
-    public var filtersEnabled = true
+    public var filtersEnabled = false
     
     //MARK: - Initialise pipeline
     @objc
@@ -52,9 +52,9 @@ public class FilterPipeline : NSObject {
         setupCoreImage()
         self.filterParameters = filterParameters
         self.flutterTextureRegistry =  flutterTextureRegistry
-        //#if DEBUG
+        #if DEBUG
         saveSampleBackgroundToDocs()
-        //#endif
+        #endif
         updateChangedFilters(filterParameters)
     }
     
