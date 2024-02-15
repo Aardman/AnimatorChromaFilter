@@ -1,29 +1,40 @@
 package com.aardman.animatorfilter
 
-public val VertexShaderSource = """#version 300 es
+public val SingleTextureVertexShader = """#version 300 es
 	// vertex value between 0-1
 	layout(location =  0) in vec2 a_texCoord;
 
 	uniform float u_flipY;
-
-	// Used to pass the texture coordinates to the fragment shader
+ 
 	out vec2 v_texCoord;
-
-	// all shaders have a main function
-	void main() {
-		// convert from 0->1 to 0->2
-		vec2 zeroToTwo = a_texCoord * 2.0;
-
-		// convert from 0->2 to -1->+1 (clipspace)
-		vec2 clipSpace = zeroToTwo - 1.0;
-
+ 
+	void main() { 
+		// convert from 0->1 to -1->+1 (clipspace)
+		vec2 clipSpace = a_texCoord * 2.0; - 1.0;
+  
 		gl_Position = vec4(clipSpace * vec2(1, u_flipY), 0, 1);
 
-		// pass the texCoord to the fragment shader
+		// pass the texCoord to the fragment shader straight through
 		// The GPU will interpolate this value between points.
 		v_texCoord = a_texCoord;
-}	"""
+}	
+"""
 
+public val DualTextureVertexShader = """#version 300 es 
+
+layout(location =  0) in vec4 position;
+layout(location =  1) in vec4 inputTextureCoordinate;
+layout(location =  2) in vec4 inputTextureCoordinate2;
+
+out vec2 textureCoordinate;
+out vec2 textureCoordinate2;
+
+void main() {
+    gl_Position = position;
+    textureCoordinate = inputTextureCoordinate.xy;
+    textureCoordinate2 = inputTextureCoordinate2.xy;
+}	
+"""
 
 //Demo filter to be replaced with ChromaKey filter
 public val gaussianShader = """#version 300 es
@@ -59,19 +70,21 @@ public val gaussianShader = """#version 300 es
 public val chromaKeyFilter  = """#version 300 es
             precision highp float; 
     
-             varying highp vec2 textureCoordinate;
-             varying highp vec2 textureCoordinate2;
+            layout(location =  0) in vec2 textureCoordinate;
+            layout(location =  1) in vec2 textureCoordinate2;
             
-             uniform float thresholdSensitivity;
-             uniform float smoothing;
-             uniform vec3 colorToReplace;
-             uniform sampler2D inputImageTexture;
+            uniform float thresholdSensitivity;
+            uniform float smoothing;
+            uniform vec3 colorToReplace;
+            uniform sampler2D inputImageTexture;
              uniform sampler2D backgroundImageTexture;
-             
+              
+		     out vec4 outColour;
+
              void main()
              {
-                 vec4 textureColor = texture2D(inputImageTexture, textureCoordinate);
-                 vec4 textureColor2 = texture2D(backgroundImageTexture, textureCoordinate2);
+                 vec4 textureColor = texture(inputImageTexture, textureCoordinate);
+                 vec4 textureColor2 = texture(backgroundImageTexture, textureCoordinate2);
                  
                  float maskY = 0.2989 * colorToReplace.r + 0.5866 * colorToReplace.g + 0.1145 * colorToReplace.b;
                  float maskCr = 0.7132 * (colorToReplace.r - maskY);
@@ -82,18 +95,19 @@ public val chromaKeyFilter  = """#version 300 es
                  float Cb = 0.5647 * (textureColor.b - Y);
                  
                  float blendValue = 1.0 - smoothstep(thresholdSensitivity, thresholdSensitivity + smoothing, distance(vec2(Cr, Cb), vec2(maskCr, maskCb)));
-                 gl_FragColor = mix(textureColor, textureColor2, blendValue);
+                 outColour = mix(textureColor, textureColor2, blendValue);
              }
 """
 
 //Shader converts data from input textures into RGB format
 public val conversionShader = """#version 300 es
 		precision mediump float;
+ 
+		in vec2 v_texCoord;
 		
 		uniform sampler2D yTexture;
 		uniform sampler2D uTexture;
 		uniform sampler2D vTexture;
-		in vec2 v_texCoord;
 		
 		out vec4 outColor;
 		
@@ -113,6 +127,33 @@ public val conversionShader = """#version 300 es
 			outColor = vec4(r, g, b, 1.0);
 		}
 	"""
+
+//Shader converts data from input textures into RGB format
+public val conversionDebugShader = """#version 300 es
+		precision mediump float;
+ 
+		in vec2 v_texCoord;
+		
+		uniform sampler2D yTexture;
+		uniform sampler2D uTexture;
+		uniform sampler2D vTexture;
+		
+		out vec4 outColor;
+		
+		void main() {
+			float y = texture(yTexture, v_texCoord).r;
+
+			// Adjust the texture coordinates for chroma subsampling
+			vec2 chromaTexCoord = v_texCoord / 2.0;
+
+			float u = texture(uTexture, chromaTexCoord).r - 0.5;
+			float v = texture(vTexture, chromaTexCoord).r - 0.5;
+  
+			outColor = vec4(r, u, v, 1.0);
+		}
+	"""
+
+
 
 public val displayShader = """#version 300 es
 		precision mediump float;
@@ -172,10 +213,10 @@ public var SolidFragmentShader = """#version 300 es
         uniform float g;
         uniform float b;
 
-		out vec4 outColor;
+		out vec4 outColour;
  		
 		void main() {  
-            outColor = vec4(r, g, b, 1.0);
+            outColour = vec4(r, g, b, 1.0);
 		}
 	"""
 

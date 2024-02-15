@@ -121,7 +121,7 @@ class GLGaussianSampleFilter(private val outSurface: Surface, private val textur
     }
 
     private fun setupUpGaussianFilterProgram() {
-        this.filterProgram = createProgram(VertexShaderSource, gaussianShader)
+        this.filterProgram = createProgram(SingleTextureVertexShader, gaussianShader)
         checkEglError("Create filter program")
         // Get vertex shader attributes
         this.attributes["a_texCoord"] = GLES30.glGetAttribLocation(this.filterProgram, "a_texCoord")

@@ -18,8 +18,14 @@ public final class FilterParameters {
     float  []  replacementColour = null ;
     String   backgroundImage = null;
     float  sensitivity = Constants.FLOAT_NOT_SET;
+    float  smoothing = Constants.FLOAT_NOT_SET;
 
-    public FilterParameters(){}
+    //init with default values
+    public FilterParameters(){
+        replacementColour = new float[] {0.0f, 1.0f, 0.0f};
+        sensitivity  = 0.4f;
+        smoothing =  0.3f;
+    }
 
     public FilterParameters(HashMap arguments) {
         ArrayList<Double> colourDoubles = (ArrayList<Double>) arguments.get("colour");

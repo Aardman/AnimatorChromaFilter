@@ -43,7 +43,7 @@
 			if (compileStatus[0] == 0) {
 				// If compilation failed, print the shader info log and delete the shader
 				val infoLog = GLES20.glGetShaderInfoLog(fragmentShader)
-				Log.e("Shader", "Error compiling shader: $infoLog")
+				Log.e("SHADER", "Error compiling shader: $infoLog")
 				GLES20.glDeleteShader(fragmentShader)
 				return 0
 			}
@@ -55,7 +55,7 @@
 			if (linkStatus[0] == 0) {
 				// If compilation failed, print the shader info log and delete the shader
 				val infoLog = GLES20.glGetProgramInfoLog(program)
-				Log.e("Program", "Error linking program: $infoLog")
+				Log.e("Shader PROGRAM", "Error linking program: $infoLog")
 				return 0
 			}
 
@@ -210,7 +210,7 @@
 			val status = IntArray(1)
 			GLES30.glGetShaderiv(shader, GLES30.GL_COMPILE_STATUS, status, 0)
 			if (status[0] == 0) {
-				Log.e("CPXGLUtils", GLES30.glGetShaderInfoLog(shader))
+				Log.e("Shader CPXGLUtils", GLES30.glGetShaderInfoLog(shader))
 				GLES30.glDeleteShader(shader)
 				return 0
 			}
@@ -361,9 +361,8 @@
 			val count = countBuffer[0]
 
 			println("")
-			println("*****")
-			println("Uniforms for program: $label")
-			println("Uniform  : Active Uniforms: $count")
+			println("Shader Uniforms for program: $label")
+			println("Shader Uniform  : Active Uniforms: $count")
 
 			for (i in 0 until count) {
 				val maxLengthBuffer = IntArray(1)
@@ -382,8 +381,7 @@
 				val type = typeBuffer[0]
 				val typeName = getUniformTypeName(type)
 
-				println("Uniform #$i: Name = $name, Size = $size, Type = $typeName")
-				println("*****")
+				println("Shader Uniform #$i: Name = $name, Size = $size, Type = $typeName")
 			}
 		}
 
@@ -410,4 +408,57 @@
 				else -> "unknown"
 			}
 		}
+
+		public fun printActiveAttributes(shaderProgramId: Int, label: String) {
+			// Get the number of active attributes
+			val countBuffer = IntArray(1)
+			GLES20.glGetProgramiv(shaderProgramId, GLES20.GL_ACTIVE_ATTRIBUTES, countBuffer, 0)
+			val count = countBuffer[0]
+
+			println("")
+			println("Shader Attributes for program: $label")
+			println("Shader Attribute : Active Attributes: $count")
+
+			for (i in 0 until count) {
+				val maxLengthBuffer = IntArray(1)
+				GLES20.glGetProgramiv(shaderProgramId, GLES20.GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, maxLengthBuffer, 0)
+				val maxLength = maxLengthBuffer[0]
+
+				val lengthBuffer = IntArray(1)
+				val sizeBuffer = IntArray(1)
+				val typeBuffer = IntArray(1)
+				val nameBuffer = ByteArray(maxLength)
+
+				GLES20.glGetActiveAttrib(shaderProgramId, i, maxLength, lengthBuffer, 0, sizeBuffer, 0, typeBuffer, 0, nameBuffer, 0)
+				val name = nameBuffer.decodeToString(0, lengthBuffer[0])
+
+				val size = sizeBuffer[0]
+				val type = typeBuffer[0]
+				val typeName = getAttributeTypeName(type)
+
+				println("Shader Attribute #$i: Name = $name, Size = $size, Type = $typeName")
+			}
+		}
+
+		private fun getAttributeTypeName(type: Int): String {
+			return when (type) {
+				GLES20.GL_FLOAT -> "GL_FLOAT"
+				GLES20.GL_FLOAT_VEC2 -> "GL_FLOAT_VEC2"
+				GLES20.GL_FLOAT_VEC3 -> "GL_FLOAT_VEC3"
+				GLES20.GL_FLOAT_VEC4 -> "GL_FLOAT_VEC4"
+				GLES20.GL_FLOAT_MAT2 -> "GL_FLOAT_MAT2"
+				GLES20.GL_FLOAT_MAT3 -> "GL_FLOAT_MAT3"
+				GLES20.GL_FLOAT_MAT4 -> "GL_FLOAT_MAT4"
+				// Add more types as needed
+				else -> "Unknown Type"
+			}
+		}
+
+		fun isVaoBound(vaoId: Int): Boolean {
+			val boundVao = IntArray(1)
+			GLES30.glGetIntegerv(GLES30.GL_VERTEX_ARRAY_BINDING, boundVao, 0)
+			return vaoId == boundVao[0]
+		}
+
+
 	}
