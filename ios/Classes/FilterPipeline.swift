@@ -56,9 +56,9 @@ public class FilterPipeline : NSObject {
         setupCoreImage()
         self.filterParameters = filterParameters
         self.flutterTextureRegistry =  flutterTextureRegistry
-        #if DEBUG
-        saveSampleBackgroundToDocs()
-        #endif
+        // #if DEBUG
+        // saveSampleBackgroundToDocs()
+        // #endif
         updateChangedFilters(filterParameters)
     }
     
@@ -415,18 +415,18 @@ extension FileManager {
     
 }
 
-#if DEBUG
-extension FilterPipeline  {
+// #if DEBUG
+// extension FilterPipeline  {
     
-    func saveSampleBackgroundToDocs(){
-        if let backgroundImage = UIImage(named: "demo_background") {
-            FileManager.default.save(filename: "demo_background.jpg", image: backgroundImage)
-            if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                let fileURL = documentsDirectory.appendingPathComponent("demo_background.jpg")
-                updateBackground(fileURL.path)
-            }
-        }
-    }
+//     func saveSampleBackgroundToDocs(){
+//         if let backgroundImage = UIImage(named: "demo_background") {
+//             FileManager.default.save(filename: "demo_background.jpg", image: backgroundImage)
+//             if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+//                 let fileURL = documentsDirectory.appendingPathComponent("demo_background.jpg")
+//                 updateBackground(fileURL.path)
+//             }
+//         }
+//     }
     
-}
-#endif
+// }
+// #endif
