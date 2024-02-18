@@ -27,12 +27,12 @@ class BlendingChromaFilter: CIFilter {
       
     static var kernel: CIColorKernel = { () -> CIColorKernel in
         
-        guard let url = myBundle?.url(forResource: "ChromaBlendShader", withExtension: "metallib") else {
-            fatalError("Unable to load ChromaBlendShader.metallib from \(myBundle?.bundlePath)")
+        guard let url = myBundle?.url(forResource: "BlendingShader", withExtension: "metallib") else {
+            fatalError("Unable to load BlendingShader.metallib from \(myBundle?.bundlePath)")
         }
              
         guard let data = try? Data(contentsOf: url) else {
-           fatalError("Unable to create data from ChromaBlendShader.metallib")
+           fatalError("Unable to create data from ChromaNew.metallib")
         }
 
         guard let kernel = try? CIColorKernel(
