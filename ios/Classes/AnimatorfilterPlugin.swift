@@ -61,11 +61,11 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
      
     func handleSetBackgroundImagePath(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         guard let arguments = call.arguments as? NSDictionary  else {
-            result(["result", "false"])
+            result(["error", "false"])
             return
         }
         guard let imgPath = arguments[ParamNames.img.rawValue]  as? String  else{
-            result(["result", "false"])
+            result(["error", "false"])
             return
         }
         AnimatorfilterPlugin.instance?.pipeline?.setBackgroundImageFrom(path: imgPath)
@@ -104,8 +104,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         if let arguments = call.arguments as? NSDictionary {
             let params = parseParams(arguments)
             pipeline?.filterParameters  = params
-            let data:[String: Any] = ["result": true]
-            result(data);
+            result( ["result": true]);
         }
         else{
             result(["error", false])
