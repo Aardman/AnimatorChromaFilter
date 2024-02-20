@@ -29,8 +29,8 @@ public class FilterPipeline : NSObject {
             updateChangedFilters(newValue)
             //copy any new values
             if newValue?.backgroundImage == nil { newValue?.backgroundImage = filterParameters?.backgroundImage }
-            if newValue?.maskColor       == nil { newValue?.maskColor = filterParameters?.maskColor }
-            if newValue?.threshold       == nil { newValue?.threshold = filterParameters?.threshold }
+            if newValue?.maskColor       == nil { newValue?.maskColor = filterParameters?.maskColor ?? FilterConstants.defaultColour}
+            if newValue?.threshold       == nil { newValue?.threshold = filterParameters?.threshold ?? FilterConstants.defaultThreshold }
             if newValue?.maskBounds      == nil { newValue?.maskBounds = filterParameters?.maskBounds }
         }
     }
@@ -38,31 +38,23 @@ public class FilterPipeline : NSObject {
     var backgroundCIImage:CIImage?
     var scaledBackgroundCIImage:CIImage?
     var chromaFilter:BlendingChromaFilter?
-    #if DEBUG
-    public var filtersEnabled = true
-    #else
+    
     public var filtersEnabled = false
-    #endif
     
     //MARK: - Initialise pipeline
-    @objc
+
     public override init(){
         super.init()
     }
     
-    @objc
     public init(filterParameters:FilterParameters, flutterTextureRegistry:FlutterTextureRegistry){
         super.init()
         setupCoreImage()
         self.filterParameters = filterParameters
-        self.flutterTextureRegistry =  flutterTextureRegistry
-         #if DEBUG
-         saveSampleBackgroundToDocs()
-         #endif
+        self.flutterTextureRegistry = flutterTextureRegistry
         updateChangedFilters(filterParameters)
     }
     
-    @objc
     public func initialize(filterParameters:FilterParameters){
         setupCoreImage()
         self.filterParameters = filterParameters
@@ -74,13 +66,13 @@ public class FilterPipeline : NSObject {
     func setupCoreImage(){
         ciContext = CIContext()
     }
-
     
     //MARK:  - Filter init and update
     
-    ///for any non-nil data in the new set of parameters, update the
-    ///filter parameters which may involve re-creating one or more CIFilters
+    /// For any non-nil data in the new set of parameters, update the
+    /// filter parameters which may involve re-creating one or more CIFilters
     func updateChangedFilters(_ newValue:FilterParameters?){
+        
         guard let newParams = newValue else { return }
         
         if let backgroundFilename = newParams.backgroundImage {
@@ -92,23 +84,16 @@ public class FilterPipeline : NSObject {
         }
         
         //gather changed and/or current values for colour and threshold
-        var colour = filterParameters?.maskColor
-        if let c  = newParams.maskColor {
-            colour = c
-        }
-        
-        var threshold = filterParameters?.threshold
-        if let t = newParams.threshold {
-            threshold = t
-        }
-        
-        var smoothing = filterParameters?.smoothing
-        if let s = newParams.smoothing {
-            smoothing = s
-        }
-        
-        //gather changes to colour and threshold
-        updateCustomChromaFilter(colour, threshold, smoothing)
+        filterParameters?.maskColor = newParams.maskColor
+        filterParameters?.threshold = newParams.threshold
+        filterParameters?.smoothing = newParams.smoothing
+         
+        /// gather changes to colour and threshold
+        updateCustomChromaFilter(
+            filterParameters?.maskColor,
+            filterParameters?.threshold,
+            filterParameters?.smoothing
+        )
     }
     
     func  updateBackground(_ path: String){
@@ -137,17 +122,13 @@ public class FilterPipeline : NSObject {
     }
     
     func updateMaskBounds(_ bounds:MaskBounds){
-        #if DEBUG
+#if DEBUG
         print("🍎 Mask Bounds Updated \(bounds)")
-        #endif
+#endif
     }
     
-    //MARK: - New API for revised processing from input raw image data - no @objc required
-    
-    /**
-     * Update and render  to be called on a background thread, write operations to NativeTexture.pixelbuffer to be  dispatched to the main thread
-     */
-   
+    //MARK: - API for processing from input raw image data from Flutter plugin, BGRA8888 format
+     
     func update(_ rawBytes: Data, texture:NativeTexture) {
         if let outputImage = getProcessedImage(from: rawBytes, texture: texture) {
             let pixelBuffer = getPixelBuffer(outputImage)
@@ -168,19 +149,19 @@ public class FilterPipeline : NSObject {
             return nil
         }
     }
-     
+    
     func getProcessedImage(from rawBytes:Data, texture:NativeTexture)  -> CIImage? {
-        //convert raw data to CoreImage
+        /// convert raw data to CoreImage CIImage
         guard let ciImage = convertToCIImage(with: rawBytes, width: texture.width, height: texture.height) else { print("❌ failed to convert input image"); return nil}
         
         var outputImage:CIImage?
         
-        //apply filtering
+        // apply filtering
         if (filtersEnabled){
             if let backgroundCIImage {
                 scaledBackgroundCIImage = transformBackgroundToFit(backgroundCIImage: backgroundCIImage, cameraImage: ciImage)
             }
-             outputImage = applyFilters(inputImage: ciImage)
+            outputImage = applyFilters(inputImage: ciImage)
         }
         else {
             outputImage = ciImage
@@ -188,7 +169,7 @@ public class FilterPipeline : NSObject {
         
         return outputImage
     }
-     
+    
     func getPixelBuffer(_ ciImage:CIImage) -> CVPixelBuffer? {
         var buffer: CVPixelBuffer?
         if let width = self.nativeTexture?.width,
@@ -210,7 +191,7 @@ public class FilterPipeline : NSObject {
     }
     
     func convertToCIImage(with rawData: Data, width: Int, height: Int) -> CIImage? {
-        //BGRA8888 with no transparency so need to skip alpha channel.
+        /// BGRA8888 with no transparency so need to skip alpha channel.
         let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
         
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -230,54 +211,12 @@ public class FilterPipeline : NSObject {
                                         shouldInterpolate: true,
                                         intent: .defaultIntent) else { return nil }
             
-            // Create and return the CIImage
             return CIImage(cgImage: cgImage)
         }
     }
     
-    //Non thread critical
     public func setBackgroundImageFrom(path:String){
         updateBackground(path)
-    }
-    
-    //MARK: - Objc API used in modified fork of Camera Plugin
-    
-    @objc
-    public func filter(_ buffer:CVPixelBuffer?) {
-        guard let buf = buffer else { return  }
-        let outputImage = CIImage(cvPixelBuffer: buf, options:[:])
-        if let background = backgroundCIImage {
-            scaledBackgroundCIImage = transformBackgroundToFit(backgroundCIImage: background, cameraImage: outputImage)
-        }
-        guard let filtered = applyFilters(inputImage: outputImage) else { return }
-        ciContext.render(filtered, to: buf)
-    }
-    
-    @objc
-    @available(iOS 11.0, *)
-    //For filtering the still image
-    //photo?.normalisedData() performs any input transform, eg: rotation
-    public func filter(asPhoto photo: AVCapturePhoto?) -> NSData? {
-        
-        var orientationMetadata:UInt32 = FilterConstants.defaultOrientationPortraitUp
-        if let orientationInt = photo?.metadata[String(kCGImagePropertyOrientation)] as? UInt32 {
-            orientationMetadata = orientationInt
-        }
-        
-        guard let rawPhoto =  photo?.cgImageRepresentation() else { return nil }
-        let rawCIImage  = CIImage(cgImage: rawPhoto)
-        let cameraImage = rawCIImage.oriented(forExifOrientation: Int32(orientationMetadata))
-        
-        if let background = backgroundCIImage {
-            scaledBackgroundCIImage = transformBackgroundToFit(backgroundCIImage: background, cameraImage: cameraImage)
-        }
-        guard let filtered = applyFilters(inputImage: cameraImage),
-              let colourspace = CGColorSpace(name:CGColorSpace.sRGB)
-        else { return nil }
-        guard
-            let data = ciContext.jpegRepresentation(of: filtered, colorSpace:colourspace)
-        else { return nil }
-        return data as NSData?
     }
     
     //MARK: - Apply filtering
@@ -287,28 +226,32 @@ public class FilterPipeline : NSObject {
     func applyFilters(inputImage camImage: CIImage) -> CIImage? {
         
         if scaledBackgroundCIImage == nil {
-            //Test background when there is no background image available
-            let colourGen = CIFilter(name: "CIConstantColorGenerator")
-            colourGen?.setValue(CIColor(red: 1.0, green: 0.0, blue: 0.0), forKey: "inputColor")
-            scaledBackgroundCIImage = colourGen?.outputImage
+            createSolidColourBackground()
         }
         
         guard let chromaFilter = self.chromaFilter else { return camImage }
         
-        //Chroma
+        /// ChromaFilter is a BlendingChromaFilter instance
         chromaFilter.cameraImage = camImage
         chromaFilter.backgroundImage = scaledBackgroundCIImage
         
-        //Apply and composite with the background image
+        /// Apply and composite with the background image
         guard let chromaBlendedImage = chromaFilter.outputImage else { return camImage }
         
         return chromaBlendedImage
     }
     
+    fileprivate func createSolidColourBackground() {
+        /// Test background when there is no background image available
+        let colourGen = CIFilter(name: "CIConstantColorGenerator")
+        colourGen?.setValue(CIColor(red: 1.0, green: 0.0, blue: 0.0), forKey: "inputColor")
+        scaledBackgroundCIImage = colourGen?.outputImage
+    }
+    
     //MARK: - Background formatting
     
-    //Camera image is a correctly oriented CI image from the camera, ie: if an AVPhotoResponse
-    //it has already been rotated to align with the input background
+    /// Camera image is a correctly oriented CI image from the camera, ie: if an AVPhotoResponse
+    /// it has already been rotated to align with the input background
     func transformBackgroundToFit(backgroundCIImage:CIImage, cameraImage:CIImage) -> CIImage?  {
         let scaledImage = scaleImage(fromImage: backgroundCIImage, into: cameraImage.getSize())
         let translatedImage = translateImage(fromImage:scaledImage, centeredBy:cameraImage.getSize())
@@ -318,7 +261,7 @@ public class FilterPipeline : NSObject {
     
     //MARK: Scale background
     
-    /// - into image is only provided for calculating the  desired size of the scaled output
+    /// the into image is only provided for calculating the  desired size of the scaled output
     func scaleImage(fromImage:CIImage, into targetDimensions:CGSize) -> CIImage? {
         let sourceDimensions = fromImage.getSize()
         let scale = calculateScale(input: sourceDimensions, toFitWithinHeightOf: targetDimensions)
@@ -329,16 +272,14 @@ public class FilterPipeline : NSObject {
         return scaleFilter.outputImage
     }
     
-    //Scale to fit the height
-    //We will allow the background to misalign with the center at this point. We may need
-    //a CIAffineTransform step for that if width input <> output.
+    /// Scale to fit the height
     func calculateScale(input: CGSize, toFitWithinHeightOf: CGSize) -> CGFloat {
         return  toFitWithinHeightOf.height / input.height
     }
     
     //MARK: Translate background
     
-    //Return the CGRect that is a window into the target size from the center
+    /// Return the CGRect that is a window into the target size from the center
     func translateImage(fromImage:CIImage?, centeredBy targetSize:CGSize) -> CIImage? {
         guard let inputImage = fromImage else  { return nil }
         let offset = (inputImage.getSize().width - targetSize.width)/2
@@ -348,8 +289,8 @@ public class FilterPipeline : NSObject {
     
     //MARK: Crop background
     
-    //Crop out from the center of the provided CIImage
-    //Background must be translated first
+    /// Crop out from the center of the provided CIImage
+    /// Background must be translated first
     func cropImage(ciImage: CIImage?, to targetSize:CGSize) -> CIImage? {
         guard let image = ciImage else { return ciImage }
         let imageDimensions = image.getSize()
@@ -415,32 +356,3 @@ extension FileManager {
     
 }
 
- #if DEBUG
- extension FilterPipeline  {
-    
-     func saveSampleBackgroundToDocs(){
-//         if let backgroundImage = UIImage(named: "demo_background") {
-//             FileManager.default.save(filename: "demo_background.jpg", image: backgroundImage)
-//             if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-//                 let fileURL = documentsDirectory.appendingPathComponent("demo_background.jpg")
-//                 updateBackground(fileURL.path)
-//             }
-//         }
-         if let backgroundImage = UIImage(named: "aardman") {
-             FileManager.default.save(filename: "aardman.jpg", image: backgroundImage)
-             if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                 let fileURL = documentsDirectory.appendingPathComponent("aardman.jpg")
-                 updateBackground(fileURL.path)
-             }
-         }
-         if let backgroundImage = UIImage(named: "blue_background") {
-             FileManager.default.save(filename: "blue_background.jpg", image: backgroundImage)
-             if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                 let fileURL = documentsDirectory.appendingPathComponent("blue_background.jpg")
-                 updateBackground(fileURL.path)
-             }
-         }
-     }
-    
- }
- #endif

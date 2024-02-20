@@ -18,7 +18,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         }
     }
     
-    //This needs to be called when before any camera frames are recieved in handleUpdate
+    /// This needs to be called when before any camera frames are recieved in handleUpdate
     public func createNativeTexture(width:Int, height:Int) {
         if  let flutterTextureRegistry {
             nativeTexture = NativeTexture(registry: flutterTextureRegistry, width: width, height: height)
@@ -43,7 +43,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         }
     }
     
-    //Handlers
+    /// Handlers
     func handleCreate(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         
         guard let arguments = call.arguments as? NSDictionary,
@@ -58,8 +58,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         result(data)
         
     }
-    
-    //return true if successful
+     
     func handleSetBackgroundImagePath(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         guard let arguments = call.arguments as? NSDictionary  else {
             result(["result", "false"])
@@ -70,11 +69,10 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
             return
         }
         AnimatorfilterPlugin.instance?.pipeline?.setBackgroundImageFrom(path: imgPath)
-        let data:[String: Any] = ["result": true]
-        result(data);
+        result(["result": true]);
     }
     
-    //just write the input bgra8888 image data to the native texture to display in widget
+    /// write the input bgra8888 image data to the native texture to display in widget
     func handleUpdate(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         if let arguments = call.arguments as? NSDictionary,
            let flutterData = arguments[ParamNames.imageData.rawValue] as? FlutterStandardTypedData,
@@ -88,7 +86,7 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
         }
     }
     
-    //take a bgra8888 image capture and return filtered version as JPEG data
+    /// take a bgra8888 image capture and return filtered version as JPEG data
     func handleProcessStillFrame(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         if let arguments = call.arguments as? NSDictionary,
            let flutterData = arguments[ParamNames.imageData.rawValue] as? FlutterStandardTypedData,
@@ -107,17 +105,16 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
             let params = parseParams(arguments)
             pipeline?.filterParameters  = params
             let data:[String: Any] = ["result": true]
-            result( ["result": true]);
+            result(data);
         }
         else{
-            result(["result", false])
+            result(["error", false])
         }
-        let data:[String: Any] = ["result": false]
-        result(data);
+        result(false);
     }
     
     func parseParams(_ arguments: NSDictionary) -> FilterParameters{
-        var result = FilterParameters()
+        let result = FilterParameters()
         if let colour = arguments[ParamNames.colour.rawValue]  as? [Double] {
             result.maskColor = (Float(colour[0]/255),Float(colour[1]/255),Float(colour[2]/255))
         }
@@ -132,19 +129,17 @@ public class AnimatorfilterPlugin: NSObject, FlutterPlugin {
     
     func handleEnable(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         AnimatorfilterPlugin.instance?.pipeline?.filtersEnabled = true
-        let data:[String: Any] = ["result": "iOS  enableFilters"]
-        result( ["result": true]);
+        result(["result": true]);
     }
     
     func handleDisable(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         AnimatorfilterPlugin.instance?.pipeline?.filtersEnabled = false
-        let data:[String: Any] = ["result": "iOS  disableFilters"]
         result( ["result": true]);
     }
     
+    /// No-op as Swift wil handle disposals automatically
     func handleDispose(_ call: FlutterMethodCall, result: @escaping FlutterResult){
-        let data:[String: Any] = ["result":"iOS " + UIDevice.current.systemVersion]
-        result(data);
+        result(true);
     }
     
 }
