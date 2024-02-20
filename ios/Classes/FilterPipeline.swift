@@ -56,9 +56,9 @@ public class FilterPipeline : NSObject {
         setupCoreImage()
         self.filterParameters = filterParameters
         self.flutterTextureRegistry =  flutterTextureRegistry
-        // #if DEBUG
-        // saveSampleBackgroundToDocs()
-        // #endif
+         #if DEBUG
+         saveSampleBackgroundToDocs()
+         #endif
         updateChangedFilters(filterParameters)
     }
     
@@ -415,10 +415,10 @@ extension FileManager {
     
 }
 
-// #if DEBUG
-// extension FilterPipeline  {
+ #if DEBUG
+ extension FilterPipeline  {
     
-//     func saveSampleBackgroundToDocs(){
+     func saveSampleBackgroundToDocs(){
 //         if let backgroundImage = UIImage(named: "demo_background") {
 //             FileManager.default.save(filename: "demo_background.jpg", image: backgroundImage)
 //             if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
@@ -426,7 +426,21 @@ extension FileManager {
 //                 updateBackground(fileURL.path)
 //             }
 //         }
-//     }
+         if let backgroundImage = UIImage(named: "aardman") {
+             FileManager.default.save(filename: "aardman.jpg", image: backgroundImage)
+             if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                 let fileURL = documentsDirectory.appendingPathComponent("aardman.jpg")
+                 updateBackground(fileURL.path)
+             }
+         }
+         if let backgroundImage = UIImage(named: "blue_background") {
+             FileManager.default.save(filename: "blue_background.jpg", image: backgroundImage)
+             if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                 let fileURL = documentsDirectory.appendingPathComponent("blue_background.jpg")
+                 updateBackground(fileURL.path)
+             }
+         }
+     }
     
-// }
-// #endif
+ }
+ #endif

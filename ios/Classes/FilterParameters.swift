@@ -24,7 +24,10 @@ public class FilterParameters: NSObject {
     @objc
     //Convenience for initialising default
     override public init()  {
-        super.init()
+        super.init()   
+        maskColor = (0.0, 1.0, 0.0)
+        threshold = 0.3
+        smoothing = 0.1
     }
     
     @objc
