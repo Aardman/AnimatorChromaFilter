@@ -226,7 +226,7 @@ public class FilterPipeline : NSObject {
     func applyFilters(inputImage camImage: CIImage) -> CIImage? {
         
         if scaledBackgroundCIImage == nil {
-            createSolidColourBackground()
+            return camImage
         }
         
         guard let chromaFilter = self.chromaFilter else { return camImage }
