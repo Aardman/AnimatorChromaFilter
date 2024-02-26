@@ -8,6 +8,33 @@ This plug-in currently supports iOS platforms, but not Android.
 
 The example folder contains a simple app that will display the camera preview with chromakey filtering enabled to show a demo background image where the chromakey colour is present in the input images.
 
+## Installation tips
+
+The following procedure may be useful when issues occur in compiling a Flutter app that has this plugin as a dependency.  
+
+	rm -rf Pods
+	rm -rf Podfile.lock 
+	rm -rf ~/pub-cache/git/AnimatorChromaFilter-*
+
+	This will remove the code downloaded from the repo for the plugin. 
+
+	flutter clean
+	flutter pub get
+	
+	Following this step the cache will contain  ~/pub-cache/git/AnimatorChromaFilter-XXX  where  XXX is a 
+	generated Id has the entire repo within it. Examining the animatorfilter.podspec file
+	in the /ios directory will show the current version number of the pod. 
+	This version number should be echoed to the terminal when pod install is run.
+
+	At this point the files required to build the plugin are available and can be installed with 
+	
+	pod install 
+	
+	It should not be necessary to perform pod repo update or pod update as this will not affect the
+	pod downloaded from GitHub. It could be relevant for downloading other pod dependencies 
+	if problems occur. 
+ 
+
 ## Example Application 
 
 The example app features a demonstration of the filter plugin, in a real app this will be provided by the hosting application. 
