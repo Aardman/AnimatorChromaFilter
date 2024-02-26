@@ -15,9 +15,9 @@ typealias MaskBounds = Array<CGPoint>
 public class FilterParameters: NSObject {
     
     var backgroundImage:String?
-    var maskColor:(Float, Float, Float) =  FilterConstants.defaultColour //defaults to green
-    var threshold:Float = FilterConstants.defaultThreshold
-    var smoothing:Float = FilterConstants.defaultSmoothing
+    var maskColor:(Float, Float, Float)?
+    var threshold:Float?
+    var smoothing:Float?
     var maskBounds:MaskBounds?
      
     /// Convenience for initialising default
